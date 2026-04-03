@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JetSlice - Premium Delivery</title>
+    <link rel="stylesheet" href="style.css?v=3">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Ionicons for general UI icons -->
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+    
+    <!-- Mapbox GL JS -->
+    <script src='https://api.mapbox.com/mapbox-gl-js/v3.9.0/mapbox-gl.js'></script>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v3.9.0/mapbox-gl.css' rel='stylesheet' />
+
+    <!-- Load config (Mapbox token) from server -->
+    <script>
+        fetch('/api/config').then(r => r.json()).then(c => {
+            window.__MAPBOX_TOKEN = c.mapbox_token;
+        }).catch(() => console.warn('[JetSlice] Config load failed - using fallback'));
+    </script>
+</head>
+<body>
+    <!-- Mobile Simulator Container (for viewing on Desktop) -->
+    <div class="iphone-mockup">
+        <div class="dynamic-island"></div>
+        <div class="app-container">
+            <!-- Mapbox Globe Background -->
+            <div id="map"></div>
+            
+            <!-- ====== SCREEN 1: HOME ====== -->
+            <section id="home-screen" class="screen active">
+                <header class="app-header">
+                    <div style="display: flex; flex-direction: column; gap: 0;">
+                        <h2 style="margin: 0; line-height: 1;">JetSlice</h2>
+                        <img id="jetslice-wing" src="jetslice_wing_only.png" alt="" style="width: 78px; height: auto; margin-top: -2px; display: block; transition: opacity 0.4s ease, transform 0.4s ease;">
+                    </div>
+                    <div style="display:flex; align-items:center;">
+                        <!-- Spacer for balance -->
+                    </div>
+                </header>
+
+                <div class="hero-section">
+                    <h1 id="hero-title" style="transition: opacity 0.4s ease;">Deliver<br><span>Anywhere.</span></h1>
+                </div>
+
+                <div class="content-scroll">
+
+                    <div class="booking-card collapsed" id="booking-card" style="display: none;">
+                        
+                        <!-- Collapsed Summary Bar -->
+                        <div class="booking-summary" onclick="app.toggleBookingForm()">
+                            <div class="summary-text">
+                                <span class="summary-route" id="summary-route-text">New York, NY → Beverly Hills, CA</span>
+                                <span class="summary-cargo" id="summary-cargo-text">• Artisan Pizza (Heated)</span>
+                            </div>
+                            <ion-icon name="chevron-down-outline" class="summary-chevron"></ion-icon>
+                        </div>
+                        
+                        <!-- Full Expandable Form -->
+                        <div class="expandable-form">
+                            <div class="route-inputs">
+                                <div class="input-group">
+                                    <ion-icon name="location-outline" class="icon origin"></ion-icon>
+                                    <input type="text" id="origin" placeholder="Pickup Address (e.g. NYC)" value="104 Christopher St, New York, NY 10014" oninput="app.updateSummary()">
+                                </div>
+                                <div class="route-line"></div>
+                                <div class="input-group">
+                                    <ion-icon name="flag-outline" class="icon dest"></ion-icon>
+                                    <input type="text" id="destination" placeholder="Dropoff Address (e.g. LA)" value="350 N Canal, Chicago, IL 60606" oninput="app.updateSummary()">
+                                </div>
+                            </div>
+    
+                            <div class="distance-warning" id="dist-warn" style="display: none;">
+                                <ion-icon name="warning-outline"></ion-icon>
+                                <span>Minimum distance of 300 miles required.</span>
+                            </div>
+    
+                            <div class="package-details">
+                                <div class="item-select">
+                                    <label>Cargo Type</label>
+                                    <select onchange="app.updateSummary()">
+                                        <option>Artisan Pizza (Heated)</option>
+                                        <option>Caviar (Refrigerated)</option>
+                                        <option>Secure Goods</option>
+                                    </select>
+                                </div>
+                            </div>
+    
+                            <button class="primary-btn" onclick="app.calculateLogistics()">
+                                Calculate Logistics
+                                <ion-icon name="arrow-forward-outline"></ion-icon>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="ai-command-wrapper" style="margin: auto 24px 0 24px; position: relative;">
+                          <div class="ai-command-panel" id="ai-command-panel" style="background-color: var(--panel-glass); backdrop-filter: blur(16px); padding: 12px 16px; border-radius: 12px; border: 1px solid var(--panel-border); display: flex; align-items: center; justify-content: space-between; flex-wrap: nowrap; box-sizing: border-box; box-shadow: 0 8px 32px rgba(0,0,0,0.6); width: 100%;">
+                              <ion-icon name="mic-outline" style="color: var(--accent-color); font-size: 20px; margin-right: 12px; flex-shrink: 0; cursor: pointer;" onclick="app.triggerVoiceConcierge()"></ion-icon>
+                              <input type="text" id="cmdField" placeholder="Search restaurants, cuisines..." onkeydown="app.handleSearch(event)" oninput="app.handleCommandInput(event)" autocomplete="off" style="background: transparent; border: none; color: var(--text-primary); font-size: 14px; flex: 1 1 auto; min-width: 0; outline: none; caret-color: var(--accent-color); width: 100%;">
+                              <div class="status-ribbon collection-fab" onclick="app.activateBossMode()" style="background: linear-gradient(135deg, #FF4B2B, #FF416C); color: white; border-radius: 8px; width: 34px; height: 30px; flex: 0 0 34px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 10px rgba(255, 65, 108, 0.4); cursor: pointer; margin-left: 12px;" title="Boss Mode - Deliver All">
+                                  <ion-icon name="planet" style="font-size: 18px;"></ion-icon>
+                              </div>
+                              <div style="background: var(--accent-color); color: #000; border-radius: 8px; width: 34px; height: 30px; flex: 0 0 34px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(212, 175, 55, 0.2); margin-left: 8px; cursor: pointer;" onclick="app.handleSearch({key: 'Enter'})">
+                                  <ion-icon name="arrow-forward-outline" style="font-size: 18px; font-weight: bold;"></ion-icon>
+                              </div>
+                          </div>
+                        
+                        <div style="display: flex; gap: 8px; overflow-x: auto; margin-top: 14px; padding-bottom: 8px; scrollbar-width: none; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain;" onwheel="event.preventDefault(); this.scrollLeft += event.deltaY;">
+                            <div onclick="app.navigateTab(event, 'search-screen')" style="border: 1px solid var(--accent-color); color: var(--accent-color); background: rgba(212, 175, 55, 0.05); padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: 500; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                                <ion-icon name="star" style="font-size: 13px;"></ion-icon> Top Rated
+                            </div>
+                            <div onclick="app.navigateTab(event, 'search-screen')" style="border: 1px solid var(--accent-color); color: var(--accent-color); background: rgba(212, 175, 55, 0.05); padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: 500; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                                <ion-icon name="ribbon" style="font-size: 13px;"></ion-icon> Michelin Star
+                            </div>
+                            <div onclick="app.navigateTab(event, 'search-screen')" style="border: 1px solid rgba(255,255,255,0.1); color: var(--text-secondary); background: rgba(20, 20, 20, 0.9); padding: 8px 14px; border-radius: 20px; font-size: 12px; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                                <ion-icon name="location" style="font-size: 13px;"></ion-icon> Near Me
+                            </div>
+                            <div onclick="app.navigateTab(event, 'search-screen')" style="border: 1px solid rgba(255,255,255,0.1); color: var(--text-secondary); background: rgba(20, 20, 20, 0.9); padding: 8px 14px; border-radius: 20px; font-size: 12px; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                                <ion-icon name="trending-up" style="font-size: 13px;"></ion-icon> Trending
+                            </div>
+                            <div onclick="app.navigateTab(event, 'search-screen')" style="border: 1px solid rgba(255,255,255,0.1); color: var(--text-secondary); background: rgba(20, 20, 20, 0.9); padding: 8px 14px; border-radius: 20px; font-size: 12px; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                                <ion-icon name="moon" style="font-size: 13px;"></ion-icon> Late Night
+                            </div>
+                            <div onclick="app.navigateTab(event, 'search-screen')" style="border: 1px solid rgba(255,255,255,0.1); color: var(--text-secondary); background: rgba(20, 20, 20, 0.9); padding: 8px 14px; border-radius: 20px; font-size: 12px; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                                <ion-icon name="diamond" style="font-size: 13px;"></ion-icon> Hidden Gems
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Autocomplete Drop-up (outside content-scroll to avoid overflow clipping) -->
+                <div id="autocomplete-popup" class="hidden" style="position: absolute; bottom: 160px; left: 24px; right: 24px; background: var(--panel-glass); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--panel-border); border-radius: 16px; overflow: hidden; box-shadow: 0 -10px 40px rgba(0,0,0,0.5); display: flex; flex-direction: column; z-index: 100; max-height: 300px; overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none;">
+                    <!-- Content dynamically populated by app.js -->
+                </div>
+            </section>
+
+            <!-- ====== RATINGS HEADER (slides down from top on emoji click) ====== -->
+            <div id="ratings-header" class="ratings-header hidden">
+                <div class="ratings-header-inner" style="text-align: center;">
+                    <p style="margin: 0 0 10px; font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-secondary); font-weight: 500;">AI Verified Scores</p>
+                    <div style="display: flex; gap: 10px; justify-content: center;">
+                        <span class="rating-chip yelp" id="rh-yelp"><ion-icon name="star"></ion-icon> 4.8 Yelp</span>
+                        <span class="rating-chip uber" id="rh-uber"><ion-icon name="star"></ion-icon> 4.9 Eats</span>
+                        <span class="rating-chip reddit" id="rh-reddit"><ion-icon name="flame"></ion-icon> 10/10 Reddit</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ====== PICKUP BAR (collapsed strip over globe) ====== -->
+            <div id="pickup-sheet" class="pickup-bar hidden">
+                <div class="pickup-bar-inner" style="flex-direction: column; gap: 12px; cursor: default;">
+                    <div style="display: flex; align-items: center; width: 100%;">
+                        <span id="pickup-sheet-emoji" style="font-size: 30px; flex-shrink: 0;">🍕</span>
+                        <div style="flex: 1; min-width: 0; margin-left: 14px;">
+                            <p id="pickup-restaurant" style="margin: 0; font-size: 15px; font-weight: 600; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">L'Industrie Pizzeria</p>
+                            <p id="pickup-food-item" style="margin: 3px 0 0; font-size: 12px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Signature Artisan Pizza</p>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0; margin-left: 12px;">
+                            <span id="pickup-eta" style="font-size: 12px; color: var(--text-secondary); white-space: nowrap;"><ion-icon name="time-outline" style="vertical-align: middle;"></ion-icon> 4h 30m</span>
+                            <strong id="pickup-cost" style="color: var(--accent-color); font-size: 17px; font-weight: 700;">---</strong>
+                        </div>
+                    </div>
+                    <button class="order-now-btn" onclick="app.openDispatchModal()">
+                        <span>Order Now</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- ====== SCREEN 2: LOGISTICS & COST ====== -->
+            <section id="logistics-screen" class="screen">
+                <header class="app-header solid">
+                    <ion-icon name="chevron-back-outline" onclick="app.goBack('home-screen')"></ion-icon>
+                    <h2>Logistics</h2>
+                    <div style="width: 24px;"></div> <!-- Spacer block -->
+                </header>
+                
+                <div class="content-scroll padded">
+                    <h3 class="section-title">Route Breakdown</h3>
+                    
+                    <div class="logistics-timeline">
+                        <!-- Step 1: Uber -->
+                        <div class="timeline-item" onclick="app.openPartnerApp('uber')" style="cursor: pointer;">
+                            <div class="timeline-icon uber"><ion-icon name="car-sport"></ion-icon></div>
+                            <div class="timeline-content">
+                                <h4>Uber Black SUV <ion-icon name="open-outline" style="font-size: 11px; opacity: 0.5; vertical-align: middle;"></ion-icon></h4>
+                                <p>Pickup to EWR Airport</p>
+                                <span class="cost-item">$145.00</span>
+                            </div>
+                        </div>
+
+                        <!-- Step 2: Flight -->
+                        <div class="timeline-item flight" onclick="app.openPartnerApp('united')" style="cursor: pointer;">
+                            <div class="timeline-icon air"><ion-icon name="airplane"></ion-icon></div>
+                            <div class="timeline-content">
+                                <h4>United Airlines Flight UA412 <ion-icon name="open-outline" style="font-size: 11px; opacity: 0.5; vertical-align: middle;"></ion-icon></h4>
+                                <p>EWR (New York) to LAX (Los Angeles)</p>
+                                <div class="flight-stats">
+                                    <span class="badge">API: United</span>
+                                    <span class="badge alt">Scraped: Southwest ($430)</span>
+                                </div>
+                                <span class="cost-item">$520.00 (First Class Cargo)</span>
+                            </div>
+                        </div>
+
+                        <!-- Step 3: Lyft -->
+                        <div class="timeline-item" onclick="app.openPartnerApp('lyft')" style="cursor: pointer;">
+                            <div class="timeline-icon lyft"><ion-icon name="car"></ion-icon></div>
+                            <div class="timeline-content">
+                                <h4>Lyft Lux <ion-icon name="open-outline" style="font-size: 11px; opacity: 0.5; vertical-align: middle;"></ion-icon></h4>
+                                <p>LAX Airport to Beverly Hills</p>
+                                <span class="cost-item">$85.00</span>
+                            </div>
+                        </div>
+
+                        <!-- Step 4: Service Fee -->
+                        <div class="timeline-item">
+                            <div class="timeline-icon service"><ion-icon name="briefcase"></ion-icon></div>
+                            <div class="timeline-content">
+                                <h4>Concierge Handling</h4>
+                                <p>Temperature-controlled case & agent</p>
+                                <span class="cost-item">$400.00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="total-cost-card">
+                        <div class="total-row">
+                            <span>Total Upfront Cost</span>
+                            <h2>$1,150.00</h2>
+                        </div>
+                        <button class="primary-btn glow" onclick="app.startMission()">Confirm & Dispatch Agent</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ====== SCREEN 3: ACTIVE MISSION ====== -->
+            <section id="tracking-screen" class="screen">
+                
+                <style>.tracking-bottom-sheet::-webkit-scrollbar { display: none; }</style>
+                <div class="tracking-bottom-sheet" style="height: 50%; max-height: 50%; overflow-y: auto; padding-bottom: 40px; scrollbar-width: none; -ms-overflow-style: none;">
+                    <div class="drag-handle"></div>
+                    <h3>Mission Status</h3>
+                    <div class="live-status">
+                        <div class="status-indicator live"></div>
+                        <span>In Flight: Local Interceptor En Route</span>
+                    </div>
+
+                    <div class="eta-block">
+                        <div class="eta-item">
+                            <span>ETA</span>
+                            <strong>14m</strong>
+                        </div>
+                        <div class="eta-item">
+                            <span>Temp</span>
+                            <strong>165°F (Ideal)</strong>
+                        </div>
+                    </div>
+
+                    <p class="agent-note" style="margin-bottom: 24px;">"Item is secured in the thermal vault. Navigating straight to origin waypoint." - John Doe</p>
+
+                    <!-- Telemetry Widget -->
+                    <div style="background: rgba(20,20,20,0.95); border: 1px solid rgba(212,175,55,0.4); border-radius: 16px; padding: 20px; overflow: hidden; margin-bottom: 24px; position: relative;">
+                        <div style="position: absolute; top: -50px; right: -50px; width: 100px; height: 100px; background: radial-gradient(circle, rgba(212,175,55,0.2) 0%, transparent 70%);"></div>
+                        <h3 style="margin: 0 0 16px; font-size: 14px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--accent-color); display: flex; align-items: center; gap: 8px;">
+                            <span class="pulse-marker" style="width: 8px; height: 8px; display: inline-block;"></span> Live IoT Sensor Data
+                        </h3>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                            <div>
+                                <p style="margin: 0 0 4px; font-size: 11px; color: var(--text-secondary);">Internal Temp</p>
+                                <p style="margin: 0; font-size: 22px; font-weight: 600; font-family: monospace;" id="telemetry-temp">34.2°F</p>
+                            </div>
+                            <div>
+                                <p style="margin: 0 0 4px; font-size: 11px; color: var(--text-secondary);">Pressure</p>
+                                <p style="margin: 0; font-size: 22px; font-weight: 600; font-family: monospace;" id="telemetry-pressure">1.02 ATM</p>
+                            </div>
+                            <div>
+                                <p style="margin: 0 0 4px; font-size: 11px; color: var(--text-secondary);">Humidity</p>
+                                <p style="margin: 0; font-size: 22px; font-weight: 600; font-family: monospace;" id="telemetry-humidity">64%</p>
+                            </div>
+                            <div>
+                                <p style="margin: 0 0 4px; font-size: 11px; color: var(--text-secondary);">Status</p>
+                                <p style="margin: 0; font-size: 14px; font-weight: 600; color: #34c759; margin-top: 4px;">Optimal</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div style="margin-bottom: 30px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 16px; font-size: 10px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px;">
+                            <span style="flex: 1; text-align: left;">Origin</span>
+                            <span style="flex: 1; text-align: center;">Transit</span>
+                            <span style="flex: 1; text-align: center;">Airport</span>
+                            <span style="flex: 1; text-align: center;">Flight</span>
+                            <span style="flex: 1; text-align: right;">Delivery</span>
+                        </div>
+                        <div style="position: relative; height: 6px; background: rgba(255,255,255,0.1); border-radius: 4px; margin: 0 6px;">
+                            <div id="flight-progress-bar" style="position: absolute; top: 0; left: 0; height: 100%; width: 85%; background: var(--accent-color); transition: width 1s linear; border-radius: 4px; z-index: 2;"></div>
+                            
+                            <!-- Stage Markers -->
+                            <div style="position: absolute; top: 50%; left: 0; transform: translate(-50%, -50%); width: 14px; height: 14px; border-radius: 50%; background: var(--accent-color); border: 2px solid var(--bg-dark); z-index: 3;"></div>
+                            <div style="position: absolute; top: 50%; left: 25%; transform: translate(-50%, -50%); width: 14px; height: 14px; border-radius: 50%; background: var(--accent-color); border: 2px solid var(--bg-dark); z-index: 3;"></div>
+                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 14px; height: 14px; border-radius: 50%; background: var(--accent-color); border: 2px solid var(--bg-dark); z-index: 3;"></div>
+                            <div style="position: absolute; top: 50%; left: 75%; transform: translate(-50%, -50%); width: 14px; height: 14px; border-radius: 50%; background: var(--accent-color); border: 2px solid var(--bg-dark); z-index: 3;"></div>
+                            <div style="position: absolute; top: 50%; left: 100%; transform: translate(-50%, -50%); width: 14px; height: 14px; border-radius: 50%; background: rgba(255,255,255,0.2); border: 2px solid var(--bg-dark); z-index: 3;"></div>
+                        </div>
+                    </div>
+
+
+
+                    <!-- Courier Identity Card -->
+                    <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 16px; margin-bottom: 24px;">
+                        <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 16px;">
+                            <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?fit=crop&w=100&h=100" alt="Agent" style="width: 50px; height: 50px; border-radius: 50%; border: 2px solid var(--accent-color); object-fit: cover;">
+                            <div>
+                                <h4 style="margin: 0 0 4px 0; font-size: 16px; color: white;">John Doe</h4>
+                                <p style="margin: 0; font-size: 12px; color: var(--accent-color);">Lead Logistics Coordinator</p>
+                                <p style="margin: 2px 0 0 0; font-size: 11px; color: var(--text-secondary);">4.99 ★ • 1,240 Secure Missions</p>
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                            <button onclick="app.messageCourier()" style="background: rgba(255,255,255,0.1); color: white; border: none; padding: 10px; border-radius: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;">
+                                <ion-icon name="chatbubble-ellipses-outline" style="font-size: 18px;"></ion-icon> Message
+                            </button>
+                            <button onclick="app.tipCourier()" id="tip-btn" style="background: rgba(212,175,55,0.15); color: var(--accent-color); border: 1px solid rgba(212,175,55,0.3); padding: 10px; border-radius: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: all 0.2s;">
+                                <ion-icon name="cash-outline" style="font-size: 18px;"></ion-icon> Add Tip
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Mission Alerts -->
+                    <h3 class="section-title">Mission Alerts</h3>
+                    <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; margin-bottom: 20px; overflow: hidden;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <ion-icon name="airplane" style="font-size: 18px; color: var(--text-secondary);"></ion-icon>
+                                <span style="font-size: 14px; color: white;">Terminal Departures</span>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <ion-icon name="thermometer" style="font-size: 18px; color: var(--text-secondary);"></ion-icon>
+                                <span style="font-size: 14px; color: white;">Altitude Temp Fluctuations</span>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px;">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <ion-icon name="navigate" style="font-size: 18px; color: var(--accent-color);"></ion-icon>
+                                <span style="font-size: 14px; color: white;">Final Mile Approach</span>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <button class="secondary-btn" style="width: 100%; border-radius: 20px; font-weight: bold; background: rgba(255,255,255,0.05); color: white; padding: 14px; border: 1px solid rgba(255,255,255,0.1);" onclick="app.goBack('home-screen')">Collapse View</button>
+                </div>
+            </section>
+
+            <!-- ====== SCREEN: SEARCH ====== -->
+            <section id="search-screen" class="screen" style="position: relative;">
+                <header class="app-header solid" style="display: flex; justify-content: space-between; align-items: center;">
+                    <h2 style="margin: 0;">AI Search</h2>
+                    <div class="fade-in-slow" style="display: flex; align-items: center; gap: 5px; font-size: 9px; color: var(--text-secondary); font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;">
+                        <img src="https://flagcdn.com/us.svg" width="12" alt="US Flag" style="opacity: 0.85;">
+                        <span>Continental USA Only</span>
+                    </div>
+                </header>
+                <div class="content-scroll padded" style="padding-top: 20px; padding-bottom: 120px;">
+
+                    <!-- PREDICTIVE DISPATCH: Airborne Now -->
+                    <h3 class="section-title" style="color: var(--accent-color); display: flex; align-items: center; gap: 8px;">
+                        <span class="pulse-marker" style="width: 8px; height: 8px; display: inline-block;"></span> Airborne Now (Intercept)
+                    </h3>
+                    <div class="curated-list" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 30px;">
+                        <div class="curated-item" style="display: flex; align-items: center; background: #2a2416; border: 1px solid rgba(212, 175, 55, 0.4); padding: 16px; border-radius: 14px; cursor: pointer; position: relative; overflow: hidden;">
+                            <span class="emoji-badge" style="font-size: 24px; margin-right: 16px; background: #3a3020; padding: 10px; border-radius: 12px; z-index: 2;">🥩</span>
+                            <div class="item-info" style="flex: 1; z-index: 2;">
+                                <h4 style="margin: 0 0 4px; font-size: 15px; color: white;">A5 Kobe Wagyu (50oz)</h4>
+                                <p style="margin: 0; font-size: 12px; color: var(--accent-color); font-weight: 600;">Currently over Kansas • Arrives in 40m</p>
+                            </div>
+                            <button style="background: var(--accent-color); color: black; border: none; padding: 6px 12px; border-radius: 12px; font-weight: bold; font-size: 12px; z-index: 2; cursor: pointer;">Intercept</button>
+                            <div style="position: absolute; right: -20px; top: -20px; font-size: 100px; opacity: 0.05; z-index: 1;">✈️</div>
+                        </div>
+                    </div>
+
+                    <h3 class="section-title">The Michelin Collection</h3>
+                    <div class="curated-list" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 30px;">
+                        <div class="curated-item" style="display: flex; align-items: center; background: #252830; padding: 16px; border-radius: 14px; cursor: pointer;">
+                            <span class="emoji-badge" style="font-size: 24px; margin-right: 16px; background: #1a1c23; padding: 10px; border-radius: 12px;">✨</span>
+                            <div class="item-info" style="flex: 1;">
+                                <h4 style="margin: 0 0 4px; font-size: 15px;">Alinea - Chicago, IL</h4>
+                                <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">3-Star Degustation Kit (Requires 2-Day Air)</p>
+                            </div>
+                            <ion-icon name="add-circle-outline" style="font-size: 24px; color: var(--accent-color);"></ion-icon>
+                        </div>
+                        <div class="curated-item" style="display: flex; align-items: center; background: #252830; padding: 16px; border-radius: 14px; cursor: pointer;">
+                            <span class="emoji-badge" style="font-size: 24px; margin-right: 16px; background: #1a1c23; padding: 10px; border-radius: 12px;">🍾</span>
+                            <div class="item-info" style="flex: 1;">
+                                <h4 style="margin: 0 0 4px; font-size: 15px;">The French Laundry - CA</h4>
+                                <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">Fresh Oysters & Royal Caviar Selection</p>
+                            </div>
+                            <ion-icon name="add-circle-outline" style="font-size: 24px; color: var(--accent-color);"></ion-icon>
+                        </div>
+                    </div>
+
+                    <h3 class="section-title">Top Global Luxuries</h3>
+                    <div class="curated-list" style="display: flex; flex-direction: column; gap: 12px;">
+                        <div class="curated-item" style="display: flex; align-items: center; background: #252830; padding: 16px; border-radius: 14px; cursor: pointer;">
+                            <span class="emoji-badge" style="font-size: 24px; margin-right: 16px; background: #1a1c23; padding: 10px; border-radius: 12px;">🥩</span>
+                            <div class="item-info" style="flex: 1;">
+                                <h4 style="margin: 0 0 4px; font-size: 15px;">A5 Kobe Wagyu Beef</h4>
+                                <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">Directly imported & cryo-sealed from Japan</p>
+                            </div>
+                            <ion-icon name="add-circle-outline" style="font-size: 24px; color: var(--accent-color);"></ion-icon>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Search bar pinned to bottom -->
+                <div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 16px 24px 20px; background: linear-gradient(transparent, var(--bg-color) 30%); z-index: 10;">
+                    <div class="ai-search-box active" style="display: flex; align-items: center; background: #1a1c23; padding: 16px; border-radius: 16px; border: 1px solid rgba(212, 175, 55, 0.3);">
+                        <ion-icon name="fast-food-outline" style="color: var(--accent-color); font-size: 20px; margin-right: 12px;"></ion-icon>
+                        <ion-icon class="mic-icon" name="mic" style="color: var(--text-secondary); font-size: 18px; cursor: pointer;" onclick="app.triggerVoiceConcierge()"></ion-icon>
+                        <input type="text" id="searchCmdField" placeholder='Try "Top Pizza", "Trending Favorites"...' onkeypress="app.handleOpenAICommand(event)" style="background: transparent; border: none; color: var(--text-primary); flex: 1; margin-left: 8px; margin-right: 12px; outline: none; font-size: 15px;">
+                        <div onclick="app.handleOpenAICommand({key:'Enter', preventDefault: ()=>{}})" style="background: var(--accent-color); color: #000; border-radius: 50%; width: 28px; min-width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(212, 175, 55, 0.4); cursor: pointer;">
+                            <ion-icon name="arrow-forward-outline" style="font-size: 16px; font-weight: bold;"></ion-icon>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ====== SCREEN 4: ORDERS ====== -->
+            <section id="orders-screen" class="screen">
+                <header class="app-header solid">
+                    <h2>Your Orders</h2>
+                </header>
+                <div class="content-scroll padded">
+                    
+                    <!-- Current / Active -->
+                    <h3 class="section-title" style="margin-top: 0;">Active Mission</h3>
+                    <div class="curated-list" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
+                        <div class="curated-item" onclick="app.navigateTo('tracking-screen')" style="display: flex; align-items: center; background: var(--surface-light); border: 1px solid var(--accent-color); padding: 16px; border-radius: 14px; cursor: pointer; transition: transform 0.2s;">
+                            <span class="emoji-badge" style="font-size: 24px; margin-right: 16px; background: rgba(212, 175, 55, 0.15); padding: 10px; border-radius: 12px; display: flex;"><ion-icon name="airplane" style="color: var(--accent-color);"></ion-icon></span>
+                            <div class="item-info" style="flex: 1;">
+                                <h4 style="margin: 0 0 4px; font-size: 15px; color: var(--accent-color);">In Transit (Mid-Air)</h4>
+                                <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">Alinea Chicago → Miami Estate</p>
+                            </div>
+                            <ion-icon name="chevron-forward" style="font-size: 20px; color: var(--accent-color);"></ion-icon>
+                        </div>
+                    </div>
+
+                    <!-- Saved / Favorites -->
+                    <h3 class="section-title">Saved Re-Orders</h3>
+                    <div class="curated-list" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
+                        <div class="curated-item" style="display: flex; align-items: center; background: var(--surface-light); padding: 16px; border-radius: 14px; cursor: pointer; transition: transform 0.2s;">
+                            <span class="emoji-badge" style="font-size: 24px; margin-right: 16px; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px; display: flex;">🥩</span>
+                            <div class="item-info" style="flex: 1;">
+                                <h4 style="margin: 0 0 4px; font-size: 15px;">A5 Kobe Wagyu Backup</h4>
+                                <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">Delivered to Aspen Lodge</p>
+                            </div>
+                            <ion-icon name="refresh" style="font-size: 20px; color: white;"></ion-icon>
+                        </div>
+                        <div class="curated-item" style="display: flex; align-items: center; background: var(--surface-light); padding: 16px; border-radius: 14px; cursor: pointer; transition: transform 0.2s;">
+                            <span class="emoji-badge" style="font-size: 24px; margin-right: 16px; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px; display: flex;">🍾</span>
+                            <div class="item-info" style="flex: 1;">
+                                <h4 style="margin: 0 0 4px; font-size: 15px;">Dom Pérignon Vintage</h4>
+                                <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">Delivered to NYC Penthouse</p>
+                            </div>
+                            <ion-icon name="refresh" style="font-size: 20px; color: white;"></ion-icon>
+                        </div>
+                    </div>
+
+                    <!-- Past Orders -->
+                    <h3 class="section-title">Past Deliveries</h3>
+                    <div class="curated-list" style="display: flex; flex-direction: column; gap: 12px;">
+                        <div class="curated-item" style="display: flex; align-items: center; background: var(--surface-light); padding: 16px; border-radius: 14px; cursor: pointer; opacity: 0.6;">
+                            <span class="emoji-badge" style="font-size: 24px; margin-right: 16px; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px; display: flex;"><ion-icon name="checkmark-circle"></ion-icon></span>
+                            <div class="item-info" style="flex: 1;">
+                                <h4 style="margin: 0 0 4px; font-size: 15px;">Le Bernardin Seafood</h4>
+                                <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">Delivered Oct 12th</p>
+                            </div>
+                            <span style="font-size: 14px; font-weight: 700; font-family: monospace;">$4,250</span>
+                        </div>
+                    </div>
+
+                 </div>
+            </section>
+
+            <!-- (Telemetry Hub Successfully Migrated to SCREEN 3 above) -->
+
+            <!-- ====== SCREEN 5: PROFILE ====== -->
+            <section id="profile-screen" class="screen">
+                <header class="app-header solid">
+                    <h2>Profile Settings</h2>
+                </header>
+                <div class="content-scroll padded">
+                    <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 30px; background: var(--surface-light); padding: 16px; border-radius: 16px; border: 1px solid var(--accent-color);">
+                        <div style="width: 64px; height: 64px; border-radius: 50%; background: var(--accent-color); display: flex; align-items: center; justify-content: center; font-size: 28px; color: black; font-weight: bold;">
+                            JS
+                        </div>
+                        <div>
+                            <h3 style="margin: 0 0 4px; font-size: 18px; color: white;">Executive Member</h3>
+                            <p style="margin: 0; color: var(--text-secondary); font-size: 13px;">Since 2026</p>
+                        </div>
+                    </div>
+
+                    <h3 class="section-title">Preferences</h3>
+                    <div style="background: var(--surface-light); border: 1px solid var(--border-color); border-radius: 12px; margin-bottom: 24px; overflow: hidden;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <ion-icon name="notifications" style="font-size: 18px; color: var(--accent-color);"></ion-icon>
+                                <span style="font-size: 15px; color: white;">Push Notifications</span>
+                            </div>
+                            <div style="width: 44px; height: 24px; background-color: var(--accent-color); border-radius: 24px; position: relative;">
+                                <div style="width: 18px; height: 18px; background-color: black; border-radius: 50%; position: absolute; top: 3px; right: 3px;"></div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px;">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <ion-icon name="location" style="font-size: 18px; color: var(--accent-color);"></ion-icon>
+                                <span style="font-size: 15px; color: white;">Location Tracking</span>
+                            </div>
+                            <span style="font-size: 13px; color: var(--text-secondary);">While Using</span>
+                        </div>
+                    </div>
+
+                    <h3 class="section-title">Appearance</h3>
+                    <div style="background: var(--surface-light); border: 1px solid var(--border-color); border-radius: 12px; margin-bottom: 24px; overflow: hidden;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px; border-bottom: 1px solid var(--border-color);">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <ion-icon name="moon" style="font-size: 18px; color: var(--accent-color);"></ion-icon>
+                                <span style="font-size: 15px; color: var(--text-primary);">Dark Theme</span>
+                            </div>
+                            <div class="toggle-switch theme-toggle-btn" onclick="app.toggleThemeMode()" style="width: 44px; height: 24px; background-color: var(--accent-color); border-radius: 24px; position: relative; cursor: pointer;">
+                                <div id="theme-toggle-knob" style="width: 18px; height: 18px; background-color: black; border-radius: 50%; position: absolute; top: 3px; right: 3px; transition: 0.3s;"></div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px;">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <ion-icon name="sync" style="font-size: 18px; color: var(--accent-color);"></ion-icon>
+                                <span style="font-size: 15px; color: var(--text-primary);">Auto-Sync (Sunrise/Sunset)</span>
+                            </div>
+                            <div class="toggle-switch auto-theme-btn" onclick="app.toggleAutoTheme()" style="width: 44px; height: 24px; background-color: transparent; border: 1px solid var(--text-secondary); border-radius: 24px; position: relative; cursor: pointer;">
+                                <div id="auto-theme-toggle-knob" style="width: 18px; height: 18px; background-color: var(--text-secondary); border-radius: 50%; position: absolute; top: 2px; left: 3px; transition: 0.3s;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3 class="section-title">Financial Data</h3>
+                    <div style="background: var(--surface-light); border: 1px solid var(--border-color); border-radius: 12px; margin-bottom: 24px; overflow: hidden;">
+                        <div style="padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <ion-icon name="business" style="font-size: 18px; color: var(--text-secondary);"></ion-icon>
+                                <span style="font-size: 15px; color: white;">Connect Bank Account</span>
+                            </div>
+                            <ion-icon name="chevron-forward" style="color: var(--text-secondary);"></ion-icon>
+                        </div>
+                        <div style="padding: 16px; border-bottom: 1px solid rgba(255,255,255,0.05); cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <ion-icon name="card" style="font-size: 18px; color: var(--accent-color);"></ion-icon>
+                                <div>
+                                    <span style="font-size: 15px; color: white; display: block;">Credit Card linked</span>
+                                    <span style="font-size: 11px; color: var(--text-secondary);">Amex Platinum ending in •••• 1004</span>
+                                </div>
+                            </div>
+                            <ion-icon name="checkmark-circle" style="color: var(--accent-color); font-size: 20px;"></ion-icon>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <!-- ====== SCREEN 6: SHARE / RECORD ====== -->
+            <section id="share-screen" class="screen" style="z-index: 15; pointer-events: none;">
+                
+                <!-- Share Hub Menu (Default View for Share) -->
+                <div id="share-hub-menu" style="position: absolute; bottom: 100px; left: 24px; right: 24px; background: var(--panel-glass); backdrop-filter: blur(20px); border-radius: 20px; border: 1px solid rgba(212, 175, 55, 0.2); pointer-events: auto; padding: 20px; transition: opacity 0.3s;">
+                    <h3 style="margin: 0 0 16px; font-size: 18px; font-weight: 600; text-align: center;">Community & Share</h3>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 16px; border-radius: 12px;">
+                            <h4 style="margin: 0 0 12px; font-size: 13px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; text-align: center;">Record Delivery</h4>
+                            <div style="display: flex; justify-content: center; gap: 24px;">
+                                <div onclick="app.startRecordingMode()" style="display: flex; flex-direction: column; align-items: center; cursor: pointer;">
+                                    <div style="width: 50px; height: 50px; border-radius: 12px; background: linear-gradient(45deg, #000 0%, #333 100%); display: flex; align-items: center; justify-content: center; margin-bottom: 6px; border: 1px solid rgba(255,255,255,0.2);">
+                                        <ion-icon name="logo-tiktok" style="font-size: 24px; color: white;"></ion-icon>
+                                    </div>
+                                    <span style="font-size: 11px; color: white;">TikTok</span>
+                                </div>
+                                <div onclick="app.startRecordingMode()" style="display: flex; flex-direction: column; align-items: center; cursor: pointer;">
+                                    <div style="width: 50px; height: 50px; border-radius: 12px; background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); display: flex; align-items: center; justify-content: center; margin-bottom: 6px;">
+                                        <ion-icon name="logo-instagram" style="font-size: 24px; color: white;"></ion-icon>
+                                    </div>
+                                    <span style="font-size: 11px; color: white;">Instagram</span>
+                                </div>
+                                <div onclick="app.startRecordingMode()" style="display: flex; flex-direction: column; align-items: center; cursor: pointer;">
+                                    <div style="width: 50px; height: 50px; border-radius: 12px; background: #FFFC00; display: flex; align-items: center; justify-content: center; margin-bottom: 6px;">
+                                        <ion-icon name="logo-snapchat" style="font-size: 24px; color: black;"></ion-icon>
+                                    </div>
+                                    <span style="font-size: 11px; color: white;">Snapchat</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div onclick="app.showCommunityHeatmap()" style="background: rgba(212, 175, 55, 0.1); border: 1px solid rgba(212, 175, 55, 0.3); padding: 16px; border-radius: 12px; display: flex; align-items: center; cursor: pointer;">
+                            <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--accent-color); display: flex; align-items: center; justify-content: center; margin-right: 16px; flex-shrink: 0;">
+                                <ion-icon name="map" style="font-size: 20px; color: black;"></ion-icon>
+                            </div>
+                            <div>
+                                <h4 style="margin: 0 0 4px; font-size: 15px; color: white;">Community Heat Map</h4>
+                                <p style="margin: 0; font-size: 12px; color: var(--text-secondary);">See live luxury orders globally</p>
+                            </div>
+                        </div>
+                        
+                        <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 16px; border-radius: 12px; display: flex; align-items: center; cursor: pointer;">
+                            <div style="width: 40px; height: 40px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; margin-right: 16px; flex-shrink: 0;">
+                                <ion-icon name="share-social" style="font-size: 20px; color: white;"></ion-icon>
+                            </div>
+                            <div>
+                                <h4 style="margin: 0 0 4px; font-size: 15px; color: white;">Share Link</h4>
+                                <p style="margin: 0; font-size: 12px; color: var(--text-secondary);">Send trackable link to friends</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Camera UI Overlay (Hidden by Default) -->
+                <div id="recording-ui" class="hidden" style="position: absolute; inset: 0; pointer-events: none;">
+                    <div style="position: absolute; top: 20px; left: 20px; color: #ff3b30; font-weight: bold; font-family: monospace; font-size: 16px; display: flex; align-items: center; gap: 8px; text-shadow: 0 1px 4px rgba(0,0,0,0.8);">
+                        <div style="width: 12px; height: 12px; background: #ff3b30; border-radius: 50%; box-shadow: 0 0 8px #ff3b30; animation: pulse 1.5s infinite;"></div> REC 00:00
+                    </div>
+                    
+                    <!-- Viewfinder corners -->
+                    <div style="position: absolute; top: 40px; left: 40px; width: 40px; height: 40px; border-top: 2px solid rgba(255,255,255,0.5); border-left: 2px solid rgba(255,255,255,0.5);"></div>
+                    <div style="position: absolute; top: 40px; right: 40px; width: 40px; height: 40px; border-top: 2px solid rgba(255,255,255,0.5); border-right: 2px solid rgba(255,255,255,0.5);"></div>
+                    <div style="position: absolute; bottom: 16px; left: 40px; width: 40px; height: 40px; border-bottom: 2px solid rgba(255,255,255,0.5); border-left: 2px solid rgba(255,255,255,0.5);"></div>
+                    <div style="position: absolute; bottom: 16px; right: 40px; width: 40px; height: 40px; border-bottom: 2px solid rgba(255,255,255,0.5); border-right: 2px solid rgba(255,255,255,0.5);"></div>
+
+                    <!-- Record Controls -->
+                    <div style="position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; pointer-events: auto;">
+                        <div style="background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-bottom: 16px; color: white; border: 1px solid rgba(255,255,255,0.2);">
+                            TikTok / Instagram Ready
+                        </div>
+                        <div style="width: 70px; height: 70px; border-radius: 50%; border: 4px solid white; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.5);" onclick="app.startRecordingCapture()">
+                            <div style="width: 24px; height: 24px; background: #ff3b30; border-radius: 4px;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Spotify Pillbox -->
+                    <div style="position: absolute; bottom: 16px; right: 16px; width: 170px; background: rgba(0,0,0,0.6); backdrop-filter: blur(10px); padding: 8px 14px; border-radius: 24px; display: flex; align-items: center; justify-content: space-between; border: 1px solid rgba(255,255,255,0.1); pointer-events: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                        <div style="display: flex; align-items: center; gap: 10px; cursor: pointer;" onclick="app.openSpotify()">
+                            <ion-icon name="musical-notes" style="color: #1DB954; font-size: 16px;"></ion-icon>
+                            <div style="display: flex; flex-direction: column;">
+                                <span id="spotify-title" style="color: white; font-size: 10px; font-weight: 600; line-height: 1.2;">LUNCH</span>
+                                <span id="spotify-artist" style="color: var(--text-secondary); font-size: 9px; line-height: 1.2;">Billie Eilish</span>
+                            </div>
+                        </div>
+                        <div onclick="app.toggleSpotifyPlay()" style="width: 24px; height: 24px; border-radius: 50%; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s;">
+                            <ion-icon id="spotify-play-icon" name="pause" style="color: white; font-size: 12px;"></ion-icon>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Community Back Button (Hidden by Default) -->
+                <div id="community-back-btn" class="hidden" style="position: absolute; top: 40px; left: 24px; pointer-events: auto; display: flex; align-items: center; gap: 8px; background: rgba(18,18,18,0.8); padding: 8px 16px; border-radius: 20px; border: 1px solid rgba(212,175,55,0.4); color: var(--accent-color); font-weight: 600; cursor: pointer;" onclick="app.closeShareViews()">
+                    <ion-icon name="arrow-back"></ion-icon> Close Heat Map
+                </div>
+                
+                <style>
+                    @keyframes pulse {
+                        0% { opacity: 1; }
+                        50% { opacity: 0.3; }
+                        100% { opacity: 1; }
+                    }
+                </style>
+            </section>
+
+            <!-- (FAB physically migrated to top app-header) -->
+
+            <!-- Bottom Navigation -->
+            <nav class="bottom-nav">
+                <a href="#" class="nav-item active" onclick="app.navigateTab(event, 'home-screen')">
+                    <ion-icon name="paper-plane"></ion-icon>
+                    <span>Deliver</span>
+                </a>
+                <a href="#" class="nav-item" onclick="app.navigateTab(event, 'orders-screen')">
+                    <ion-icon name="receipt"></ion-icon>
+                    <span>Orders</span>
+                </a>
+                <a href="#" class="nav-item" onclick="app.navigateTab(event, 'profile-screen')" style="position: relative;">
+                    <div style="position: relative;">
+                        <ion-icon name="person"></ion-icon>
+                        <div class="status-ribbon gold" style="position: absolute; top: -4px; right: -8px; background: linear-gradient(135deg, #FFDF73, #D4AF37); color: #000; padding: 3px; border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: 0 2px 5px rgba(212, 175, 55, 0.5);">
+                            <ion-icon name="trophy" style="font-size: 10px;"></ion-icon>
+                        </div>
+                    </div>
+                    <span>Profile</span>
+                </a>
+                <a href="#" class="nav-item" onclick="app.navigateTab(event, 'share-screen')">
+                    <ion-icon name="people-outline"></ion-icon>
+                    <span>Community</span>
+                </a>
+            </nav>
+
+            <!-- ====== DISPATCH PARTNER MODAL ====== -->
+            <div id="dispatch-modal" class="hidden" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: transparent; z-index: 9999; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; transition: background 0.4s; overflow: hidden;">
+                
+                <!-- AI Transcript Box (Floating Above Sheet) -->
+                <div id="ai-transcript-box" class="hidden" style="width: 90%; max-width: 400px; background: var(--panel-glass); backdrop-filter: blur(16px); border: 1px solid var(--accent-color); border-radius: 16px; padding: 16px; margin-bottom: 24px; box-shadow: 0 10px 30px rgba(212, 175, 55, 0.15); transform: translateY(20px); opacity: 0; transition: all 0.4s ease; display: flex; flex-direction: column; pointer-events: auto;">
+                    
+                    <!-- Top Audio Visualizer Bar -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px; margin-bottom: 12px;">
+                        <span style="font-size: 11px; color: var(--accent-color); text-transform: uppercase; font-weight: bold; letter-spacing: 1px; display: flex; align-items: center; gap: 6px;">
+                            <ion-icon name="radio"></ion-icon> Live Transcript
+                        </span>
+                        
+                        <!-- 5-bar animated audio visualizer -->
+                        <div class="sound-wave" style="display: flex; gap: 3px; align-items: flex-end; height: 14px;">
+                            <div class="bar" style="width: 3px; background: var(--accent-color); border-radius: 3px; animation: sound 1.2s infinite ease-in-out;"></div>
+                            <div class="bar" style="width: 3px; background: var(--accent-color); border-radius: 3px; animation: sound 1.5s infinite ease-in-out reverse;"></div>
+                            <div class="bar" style="width: 3px; background: var(--accent-color); border-radius: 3px; animation: sound 0.8s infinite ease-in-out;"></div>
+                            <div class="bar" style="width: 3px; background: var(--accent-color); border-radius: 3px; animation: sound 1.1s infinite ease-in-out reverse;"></div>
+                            <div class="bar" style="width: 3px; background: var(--accent-color); border-radius: 3px; animation: sound 1.3s infinite ease-in-out;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Transcript Feed -->
+                    <div id="ai-transcript-feed" style="max-height: 150px; overflow-y: auto; font-size: 13px; line-height: 1.5; display: flex; flex-direction: column; gap: 10px; scrollbar-width: none; -ms-overflow-style: none;">
+                        <!-- Messages injected here via JS -->
+                    </div>
+                </div>
+
+                <div class="dispatch-sheet" style="background: var(--panel-glass); border-top: 1px solid rgba(212,175,55,0.4); width: 100%; border-radius: 24px 24px 0 0; padding: 24px; box-shadow: 0 -10px 40px rgba(0,0,0,0.5); transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); pointer-events: auto;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                        <h3 style="margin: 0; font-size: 20px;">Procurement Method</h3>
+                        <ion-icon name="close-circle" style="font-size: 28px; color: var(--text-secondary); cursor: pointer;" onclick="app.closeDispatchModal()"></ion-icon>
+                    </div>
+
+                    <!-- JetSlice Native AI Voice-Call -->
+                    <div onclick="app.simulateAIDispatch()" style="background: linear-gradient(135deg, rgba(212,175,55,0.15) 0%, rgba(212,175,55,0.05) 100%); border: 1px solid var(--accent-color); padding: 18px; border-radius: 16px; margin-bottom: 20px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; position: relative; overflow: hidden; box-shadow: 0 4px 15px rgba(212,175,55,0.15);">
+                        <div style="position: absolute; width: 100px; height: 100px; background: radial-gradient(circle, rgba(212,175,55,0.2) 0%, transparent 70%); top: -50px; left: -50px; animation: pulseOrb 3s infinite;"></div>
+                        <div style="display: flex; align-items: center; gap: 16px; z-index: 2;">
+                            <div style="background: var(--accent-color); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                <ion-icon name="pulse" style="font-size: 24px; color: black;"></ion-icon>
+                            </div>
+                            <div>
+                                <h4 style="margin: 0 0 4px 0; font-size: 16px; color: white; display: flex; align-items: center; gap: 6px;">AI Order your Food <ion-icon name="sparkles" style="color: var(--accent-color); font-size: 14px;"></ion-icon></h4>
+                                <p style="margin: 0; font-size: 13px; color: var(--accent-color);">Direct AI Phone Call • No Fees • Lowest Risk</p>
+                            </div>
+                        </div>
+                        <div id="ai-dispatch-status" style="z-index: 2;"><ion-icon name="chevron-forward" style="color: var(--accent-color); font-size: 20px;"></ion-icon></div>
+                    </div>
+
+                    <p style="font-size: 12px; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 12px; letter-spacing: 1px;">Third-Party Integrations</p>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <!-- Uber Eats -->
+                        <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 16px; display: flex; flex-direction: column; align-items: center; text-align: center; cursor: pointer;">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Uber_Eats_2020_logo.svg" alt="Uber Eats" style="height: 20px; margin-bottom: 8px; filter: invert(1);">
+                            <h4 style="margin: 0 0 4px 0; font-size: 14px; color: white;">Uber Eats</h4>
+                            <span style="font-size: 11px; color: var(--text-secondary);">+ 15% Platform Fee</span>
+                        </div>
+                        
+                        <!-- DoorDash -->
+                        <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 16px; display: flex; flex-direction: column; align-items: center; text-align: center; cursor: pointer;">
+                            <svg viewBox="0 0 512 512" style="height: 24px; margin-bottom: 8px;" fill="#FF3008"><path d="M428.1 114.7H133.5c-42.5 0-82.6 15.6-112.5 44-5.3 5-8 12.1-7.6 19.5.4 7.4 3.7 14.1 9 18.7l50.3 43.6c5 4.3 11.5 6.6 18.2 6.6 6 0 11.8-2 16.5-5.6l.8-.6c18.5-13.8 41.2-21.2 64.9-21.2h255c25.4 0 46-20.6 46-46v-13c0-25.4-20.6-46-46-46z"/><path d="M428.1 319.4H133.5c-43.5 0-84.5 16.2-114.8 45.7-4.9 4.8-7.5 11.5-7.4 18.3.1 6.8 3 13.2 7.7 17.8l50.6 49.6c4.6 4.5 10.9 7.1 17.5 7.1 5.8 0 11.4-2 15.9-5.6l.7-.5c18.7-14.7 42-22.6 66.3-22.6h257.9c25.4 0 46-20.6 46-46v-18.4c0-25.4-20.6-46-46-46z"/></svg>
+                            <h4 style="margin: 0 0 4px 0; font-size: 14px; color: white;">DoorDash</h4>
+                            <span style="font-size: 11px; color: var(--text-secondary);">+ 12% Platform Fee</span>
+                        </div>
+
+                        <!-- Grubhub -->
+                        <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 16px; display: flex; flex-direction: column; align-items: center; text-align: center; cursor: pointer;">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/GrubHub_Logo.svg/512px-GrubHub_Logo.svg.png" alt="Grubhub" style="height: 20px; margin-bottom: 8px;">
+                            <h4 style="margin: 0 0 4px 0; font-size: 14px; color: white;">Grubhub</h4>
+                            <span style="font-size: 11px; color: var(--text-secondary);">Available</span>
+                        </div>
+
+                        <!-- Call Yourself -->
+                        <a href="tel:+15550198273" style="text-decoration: none; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 16px; display: flex; flex-direction: column; align-items: center; text-align: center; cursor: pointer;">
+                            <ion-icon name="call" style="font-size: 24px; color: #34c759; margin-bottom: 8px;"></ion-icon>
+                            <h4 style="margin: 0 0 4px 0; font-size: 14px; color: white;">Call Yourself</h4>
+                            <span style="font-size: 11px; color: var(--text-secondary);">Auto-Dialer</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ultra-Premium Voice Concierge Overlay -->
+            <div id="voice-overlay" class="hidden" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(10,10,10,0.85); backdrop-filter: blur(20px); z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; transition: opacity 0.3s;">
+                <div class="voice-orb" style="width: 120px; height: 120px; border-radius: 50%; background: radial-gradient(circle, var(--accent-color) 0%, transparent 70%); box-shadow: 0 0 60px var(--accent-color); animation: pulseOrb 2s infinite ease-in-out; margin-bottom: 30px; position: relative; display: flex; justify-content: center; align-items: center;">
+                    <!-- Sound Wave Visualizer -->
+                    <div class="sound-wave" style="display: flex; gap: 6px; height: 40px; align-items: center;">
+                        <div class="bar" style="width: 4px; height: 100%; background: white; border-radius: 2px; animation: soundWave 0.8s infinite ease-in-out; animation-delay: 0.1s;"></div>
+                        <div class="bar" style="width: 4px; height: 100%; background: white; border-radius: 2px; animation: soundWave 1.0s infinite ease-in-out; animation-delay: 0.3s;"></div>
+                        <div class="bar" style="width: 4px; height: 100%; background: white; border-radius: 2px; animation: soundWave 0.9s infinite ease-in-out; animation-delay: 0.5s;"></div>
+                        <div class="bar" style="width: 4px; height: 100%; background: white; border-radius: 2px; animation: soundWave 1.1s infinite ease-in-out; animation-delay: 0.2s;"></div>
+                        <div class="bar" style="width: 4px; height: 100%; background: white; border-radius: 2px; animation: soundWave 0.7s infinite ease-in-out; animation-delay: 0.4s;"></div>
+                    </div>
+                </div>
+                <div id="voice-text-container" style="max-width: 80%; text-align: center; height: 60px;">
+                    <p id="voice-text" style="color: white; font-size: 24px; font-weight: 300; margin: 0; line-height: 1.4; opacity: 0.9;"></p>
+                </div>
+                <style>
+                    @keyframes pulseOrb {
+                        0% { transform: scale(0.9); opacity: 0.7; }
+                        50% { transform: scale(1.1); opacity: 1; box-shadow: 0 0 100px var(--accent-color); }
+                        100% { transform: scale(0.9); opacity: 0.7; }
+                    }
+                    @keyframes soundWave {
+                        0%, 100% { transform: scaleY(0.2); opacity: 0.5; }
+                        50% { transform: scaleY(1); opacity: 1; }
+                    }
+                </style>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="app.js?v=4"></script>
+</body>
+</html>
