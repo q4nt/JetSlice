@@ -1495,9 +1495,9 @@ const app = {
 
                     // Show ratings header panel
                     if (ratings) {
-                        document.getElementById('rh-yelp').innerHTML = `<img src="Yelp_Logo.svg.png" style="height: 18px; vertical-align: middle; margin-right: 6px; border-radius: 4px; background: rgba(255,255,255,0.95); padding: 2px;"> ` + ratings.yelp;
-                        document.getElementById('rh-uber').innerHTML = `<img src="uber eats.jpeg" style="height: 18px; vertical-align: middle; margin-right: 6px; border-radius: 4px; background: rgba(255,255,255,0.95); padding: 2px;"> ` + ratings.uberEats;
-                        document.getElementById('rh-reddit').innerHTML = `<img src="reddit.png" style="height: 18px; vertical-align: middle; margin-right: 6px; border-radius: 4px; background: rgba(255,255,255,0.95); padding: 2px;"> ` + ratings.reddit;
+                        document.getElementById('rh-yelp').innerHTML = `<img src="Yelp_Logo.svg.png" style="height: 24px; vertical-align: middle; margin-right: 6px; border-radius: 4px; background: rgba(255,255,255,0.95); padding: 2px; box-shadow: 0 2px 4px rgba(0,0,0,0.5);"> ` + ratings.yelp;
+                        document.getElementById('rh-uber').innerHTML = `<img src="uber eats.jpeg" style="height: 24px; vertical-align: middle; margin-right: 6px; border-radius: 4px; background: rgba(255,255,255,0.95); padding: 2px; box-shadow: 0 2px 4px rgba(0,0,0,0.5);"> ` + ratings.uberEats;
+                        document.getElementById('rh-reddit').innerHTML = `<img src="reddit.png" style="height: 24px; vertical-align: middle; margin-right: 6px; border-radius: 4px; background: rgba(255,255,255,0.95); padding: 2px; box-shadow: 0 2px 4px rgba(0,0,0,0.5);"> ` + ratings.reddit;
                         const ratingsHeader = document.getElementById('ratings-header');
                         if (ratingsHeader) ratingsHeader.classList.remove('hidden');
                     }
@@ -2412,17 +2412,7 @@ const app = {
         if (dispatchBtn) dispatchBtn.disabled = true;
     },
 
-    /**
-     * Switches the active tab in the Rate Marketplace panel
-     */
-    switchRateTab(tabName) {
-        document.querySelectorAll('.rmp-tab').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.rmp-tab-content').forEach(c => c.classList.remove('active'));
-        const tab = document.querySelector(`.rmp-tab[data-tab="${tabName}"]`);
-        const content = document.getElementById(`rmp-${tabName}-tab`);
-        if (tab) tab.classList.add('active');
-        if (content) content.classList.add('active');
-    },
+
 
     /**
      * Populates the Rate Marketplace panel with flight and ride options
@@ -2476,9 +2466,6 @@ const app = {
         badge.innerHTML = '<span class="pulse-dot"></span> ' + 8 + ' Providers';
         routeLabel.innerHTML = `<span>${originCode}</span> <span class="arrow">&#8594;</span> <span>${destCode}</span> <span style="margin-left:auto;font-size:11px;color:var(--text-secondary)">${dist.toLocaleString()} mi</span>`;
 
-        // Reset tabs to flights
-        this.switchRateTab('flights');
-
         // Generate flight options
         let flights = [];
         
@@ -2501,113 +2488,144 @@ const app = {
             ];
         }
 
-        // Mark best deal
-        const cheapest = flights.reduce((a, b) => a.price < b.price ? a : b);
-        const mostExpensive = flights.reduce((a, b) => a.price > b.price ? a : b);
+        // Build Flight & Ride unified packages
+        let unifiedPackages = [];
+        const now = new Date();
 
-        let flightHTML = '';
-        flights.forEach(f => {
-            const isBest = f === cheapest;
-            const totalDur = flightMins + (f.stops * 45);
-            const dh = Math.floor(totalDur / 60);
-            const dm = totalDur % 60;
-            const stopsText = f.stops === 0 ? 'Nonstop' : (f.stops === 1 ? '1 Stop' : f.stops + ' Stops');
-            const stopsClass = f.stops === 0 ? 'nonstop' : '';
-
-            flightHTML += `
-                <div class="rmp-flight-card${isBest ? ' best-deal selected' : ''}">
-                    <div class="rmp-fc-top" style="align-items: flex-start; justify-content: space-between;">
-                        <div class="rmp-fc-time" style="display: flex; flex-direction: column;">
-                            <h4 style="margin: 0; font-size: 22px; font-weight: 700; color: white; letter-spacing: -0.5px;">${f.dept}</h4>
-                            <span style="font-size: 12px; color: var(--text-secondary); margin-top: 2px; text-transform: uppercase; letter-spacing: 1px;">Departure</span>
-                        </div>
-                        <div class="rmp-fc-price${isBest ? ' best' : ''}" style="text-align: right;">
-                            <span class="amount">$${f.price}</span>
-                            <span class="per">per seat</span>
-                        </div>
-                    </div>
-                    <div class="rmp-fc-route">
-                        <span class="rmp-fc-code">${originCode}</span>
-                        <div class="rmp-fc-route-line">
-                            <span class="duration">${dh}h ${dm}m</span>
-                            <div class="line"></div>
-                            <span class="stops ${stopsClass}">${stopsText}</span>
-                        </div>
-                        <span class="rmp-fc-code dest">${destCode}</span>
-                    </div>
-                    <div class="rmp-fc-meta">
-                        <span class="rmp-fc-tag" style="border-left: 4px solid ${f.color}; padding-left: 6px;">${f.airline}</span>
-                        <span class="rmp-fc-tag">${f.flightNum} - ${f.cabin}</span>
-                    </div>
-                </div>`;
-        });
-        flightList.innerHTML = flightHTML;
-
-        // Generate ride options
-        const buildRideCard = (name, vehicle, bgColor, icon, baseMin, baseMax, etaMin, etaMax, surge, scheduled) => {
+        // Build Ride Options
+        const buildRideCard = (name, vehicle, bgColor, icon, baseMin, baseMax, etaMin, etaMax, surge) => {
             const price = baseMin + Math.round(Math.random() * (baseMax - baseMin));
             const eta = etaMin + Math.round(Math.random() * (etaMax - etaMin));
             const isBest = !surge && price === baseMin;
-            return { name, vehicle, bgColor, icon, price, eta, surge, scheduled, isBest };
+            return { name, vehicle, bgColor, icon, price, eta, surge, isBest };
         };
-
-        const schedTime1 = `Today ${6 + Math.floor(Math.random() * 3)}:${['00','15','30','45'][Math.floor(Math.random()*4)]} AM`;
-        const schedTime2 = `Today ${flightHrs + 8 + Math.floor(Math.random() * 2)}:${['00','15','30','45'][Math.floor(Math.random()*4)]} AM`;
-
-        const pickupOptions = [
-            buildRideCard('Uber Black', 'Premium Sedan', '#000', 'car-sport', 85, 145, 3, 8, false, schedTime1),
-            buildRideCard('UberX', 'Standard Vehicle', '#222', 'car', 35, 65, 2, 6, false, schedTime1),
-            buildRideCard('Uber XL', 'SUV / Minivan', '#333', 'bus', 55, 95, 4, 10, false, schedTime1),
-            buildRideCard('Lyft Lux', 'Premium Vehicle', '#FF00BF', 'car-sport', 80, 140, 3, 9, Math.random() > 0.6, schedTime1),
-            buildRideCard('Lyft Standard', 'Standard Vehicle', '#8A2387', 'car', 30, 58, 2, 7, false, schedTime1),
-            buildRideCard('Lyft XL', 'XL Vehicle', '#6B21A8', 'bus', 50, 88, 5, 12, false, schedTime1),
-            buildRideCard('Yellow Cab', 'Metered Taxi', '#F7C948', 'car', 45, 90, 1, 5, false, schedTime1),
-            buildRideCard('Curb', 'Licensed Taxi', '#1A73E8', 'car', 42, 85, 2, 8, false, schedTime1)
-        ];
-
         const deliveryOptions = [
-            buildRideCard('Uber Black', 'Premium Sedan', '#000', 'car-sport', 70, 130, 3, 8, Math.random() > 0.7, schedTime2),
-            buildRideCard('UberX', 'Standard Vehicle', '#222', 'car', 28, 55, 2, 6, false, schedTime2),
-            buildRideCard('Uber XL', 'SUV / Minivan', '#333', 'bus', 45, 85, 4, 10, false, schedTime2),
-            buildRideCard('Lyft Lux', 'Premium Vehicle', '#FF00BF', 'car-sport', 65, 125, 3, 9, false, schedTime2),
-            buildRideCard('Lyft Standard', 'Standard Vehicle', '#8A2387', 'car', 25, 50, 2, 7, false, schedTime2),
-            buildRideCard('Lyft XL', 'XL Vehicle', '#6B21A8', 'bus', 40, 78, 5, 12, false, schedTime2),
-            buildRideCard('Yellow Cab', 'Metered Taxi', '#F7C948', 'car', 38, 80, 1, 5, false, schedTime2),
-            buildRideCard('Curb', 'Licensed Taxi', '#1A73E8', 'car', 35, 75, 2, 8, false, schedTime2)
+            buildRideCard('Uber Black', 'Premium Sedan', '#000', 'car-sport', 70, 130, 3, 8, Math.random() > 0.7),
+            buildRideCard('UberX', 'Standard Vehicle', '#222', 'car', 28, 55, 2, 6, false),
+            buildRideCard('Uber XL', 'SUV / Minivan', '#333', 'bus', 45, 85, 4, 10, false),
+            buildRideCard('Lyft Lux', 'Premium Vehicle', '#FF00BF', 'car-sport', 65, 125, 3, 9, false),
+            buildRideCard('Yellow Cab', 'Metered Taxi', '#F7C948', 'car', 38, 80, 1, 5, false)
         ];
 
-        const renderRides = (rides) => {
-            return rides.map(r => {
-                const surgeHTML = r.surge ? '<span class="surge">1.5x</span>' : '';
-                const priceClass = r.isBest ? ' best' : '';
-                const selectedClass = r.name.includes('Black') || r.name.includes('Lux') ? ' selected' : '';
-                return `
-                    <div class="rmp-ride-card${selectedClass}">
-                        <div class="rmp-rc-logo" style="background:${r.bgColor};color:#fff">
-                            <ion-icon name="${r.icon}"></ion-icon>
-                        </div>
-                        <div class="rmp-rc-info">
-                            <h5>${r.name} ${surgeHTML}</h5>
-                            <span class="vehicle">${r.vehicle}</span>
-                            <span class="eta"><ion-icon name="time-outline" style="font-size:11px"></ion-icon> ${r.eta} min away</span>
-                        </div>
-                        <div class="rmp-rc-right">
-                            <span class="price${priceClass}">$${r.price}</span>
-                            <span class="scheduled">${r.scheduled}</span>
-                        </div>
-                    </div>`;
-            }).join('');
-        };
+        flights.forEach(f => {
+            const topRides = deliveryOptions.filter(r => r.name.includes('Black') || r.name.includes('Lux'));
+            const ride = topRides[Math.floor(Math.random() * topRides.length)];
 
-        pickupRides.innerHTML = renderRides(pickupOptions);
-        deliveryRides.innerHTML = renderRides(deliveryOptions);
+            // Parse flight departure time (e.g. "6:15 AM", "12:30 PM")
+            const timeParts = f.dept.match(/(\d+):(\d+)\s+(AM|PM)/i);
+            let hours = parseInt(timeParts[1]);
+            const minutes = parseInt(timeParts[2]);
+            const ampm = timeParts[3].toUpperCase();
+            if (ampm === 'PM' && hours < 12) hours += 12;
+            if (ampm === 'AM' && hours === 12) hours = 0;
+
+            const deptDate = new Date(now);
+            deptDate.setHours(hours, minutes, 0, 0);
+
+            // Calculation
+            const flightDurMins = flightMins + (f.stops * 45);
+            const standardRideDurMins = ride.eta + 25; 
+            const totalDurMins = flightDurMins + standardRideDurMins;
+
+            const arrivalDate = new Date(deptDate.getTime() + totalDurMins * 60000);
+            const arrStr = arrivalDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            
+            const totalCost = f.price + ride.price;
+
+            unifiedPackages.push({
+                flight: f,
+                ride: ride,
+                totalCost: totalCost,
+                deptDate: deptDate,
+                arrivalDate: arrivalDate,
+                arrStr: arrStr,
+                totalDurMins: totalDurMins
+            });
+        });
+
+        // Sort chronologically by Arrival Time
+        unifiedPackages.sort((a, b) => a.arrivalDate - b.arrivalDate);
+
+        // Calculate cheapest and most expensive purely on Total Cost
+        const cheapest = unifiedPackages.reduce((a, b) => a.totalCost < b.totalCost ? a : b);
+        const mostExpensive = unifiedPackages.reduce((a, b) => a.totalCost > b.totalCost ? a : b);
+
+        let scheduleHTML = '';
+        unifiedPackages.forEach((pkg, index) => {
+            const isBest = pkg === cheapest;
+            const dh = Math.floor(pkg.totalDurMins / 60);
+            const dm = pkg.totalDurMins % 60;
+            const stopsText = pkg.flight.stops === 0 ? 'Nonstop' : (pkg.flight.stops === 1 ? '1 Stop' : pkg.flight.stops + ' Stops');
+            const stopsClass = pkg.flight.stops === 0 ? 'nonstop' : '';
+
+            scheduleHTML += `
+                <div class="rmp-flight-card${isBest ? ' best-deal selected' : ''}" style="display:flex; flex-direction:column; gap:8px;">
+                    <div class="rmp-fc-top" style="align-items: flex-start; justify-content: space-between;">
+                        <div class="rmp-fc-time" style="display: flex; flex-direction: column;">
+                            <h4 style="margin: 0; font-size: 22px; font-weight: 700; color: white; letter-spacing: -0.5px;">${pkg.arrStr}</h4>
+                            <span style="font-size: 12px; color: var(--accent-color); margin-top: 2px; text-transform: uppercase; letter-spacing: 1px;">Est. Delivery</span>
+                        </div>
+                        <div class="rmp-fc-price${isBest ? ' best' : ''}" style="text-align: right;">
+                            <span class="amount">$${pkg.totalCost}</span>
+                            <span class="per">Total</span>
+                        </div>
+                    </div>
+                    
+                    <div class="rmp-fc-route" style="margin: 8px 0 12px 0;">
+                        <span class="rmp-fc-code">${originCode}</span>
+                        <div class="rmp-fc-route-line">
+                            <span class="duration">${dh}h ${dm}m total</span>
+                            <div class="line"></div>
+                            <span class="stops ${stopsClass}"><ion-icon name="airplane"></ion-icon> &nbsp;+&nbsp; <ion-icon name="car-sport"></ion-icon></span>
+                        </div>
+                        <span class="rmp-fc-code dest">HOME</span>
+                    </div>
+
+                    <!-- Nested Leg 1: Flight -->
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 8px 10px; display: flex; align-items: center; justify-content: space-between;">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <div style="background: ${pkg.flight.color}; width: 26px; height: 26px; border-radius: 6px; display:flex; align-items:center; justify-content:center; box-shadow: 0 2px 4px rgba(0,0,0,0.5);">
+                                <ion-icon name="airplane" style="color:white; font-size:14px;"></ion-icon>
+                            </div>
+                            <div style="display:flex; flex-direction:column; align-items:flex-start;">
+                                <div style="font-size:13px; color:white; font-weight:600;">${pkg.flight.airline}</div>
+                                <div style="font-size:11px; color:var(--text-secondary);"><span style="color:#fff;">${pkg.flight.dept}</span> Departure • ${stopsText}</div>
+                            </div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-size:13px; color:white; font-weight:600;">$${pkg.flight.price}</div>
+                            <div style="font-size:11px; color:var(--text-secondary);">${pkg.flight.cabin}</div>
+                        </div>
+                    </div>
+
+                    <!-- Nested Leg 2: Driver -->
+                    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 8px 10px; display: flex; align-items: center; justify-content: space-between;">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <div style="background: ${pkg.ride.bgColor}; width: 26px; height: 26px; border-radius: 6px; display:flex; align-items:center; justify-content:center; box-shadow: 0 2px 4px rgba(0,0,0,0.5);">
+                                <ion-icon name="car-sport" style="color:white; font-size:14px;"></ion-icon>
+                            </div>
+                            <div style="display:flex; flex-direction:column; align-items:flex-start;">
+                                <div style="font-size:13px; color:white; font-weight:600;">Courier: ${pkg.ride.name}</div>
+                                <div style="font-size:11px; color:var(--text-secondary);">Final Mile Connect</div>
+                            </div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-size:13px; color:white; font-weight:600;">$${pkg.ride.price}</div>
+                            <div style="font-size:11px; color:var(--text-secondary);">${pkg.ride.vehicle}</div>
+                        </div>
+                    </div>
+                </div>`;
+        });
+        
+        const scheduleList = document.getElementById('rmp-schedule-list');
+        if (scheduleList) scheduleList.innerHTML = scheduleHTML;
 
         // Savings calculation
-        const savings = mostExpensive.price - cheapest.price;
-        savingsText.textContent = `Save up to $${savings} by choosing ${cheapest.airline} over ${mostExpensive.airline}`;
+        const savings = mostExpensive.totalCost - cheapest.totalCost;
+        savingsText.textContent = `Save up to $${savings} by choosing the best schedule value`;
 
         document.getElementById('rmp-content').scrollTop = 0;
-        console.log('[JetSlice] Rate Marketplace populated:', originCode, '->', destCode);
+        console.log('[JetSlice] Schedule populated:', originCode, '->', destCode);
     },
 
     /**

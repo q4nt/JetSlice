@@ -96,19 +96,17 @@
 <div class="ai-command-panel" style="background-color: var(--panel-glass); backdrop-filter: blur(16px); padding: 12px 16px; border-radius: 12px; border: 1px solid var(--panel-border); display: flex; align-items: center; justify-content: space-between; flex-wrap: nowrap; box-sizing: border-box; box-shadow: 0 8px 32px rgba(0,0,0,0.6); width: 100%;">
 <ion-icon name="mic-outline" onclick="app.triggerVoiceConcierge()" style="color: var(--accent-color); font-size: 20px; margin-right: 12px; flex-shrink: 0; cursor: pointer;"></ion-icon>
 <input autocomplete="off" oninput="app.handleCommandInput(event)" onkeydown="app.handleSearch(event)" placeholder="Search restaurants, cuisines..." style="background: transparent; border: none; color: var(--text-primary); font-size: 14px; flex: 1 1 auto; min-width: 0; outline: none; caret-color: var(--accent-color); width: 100%;" type="text"/>
-<div class="status-ribbon collection-fab" onclick="app.activateBossMode()" style="background: linear-gradient(135deg, #FF4B2B, #FF416C); color: white; border-radius: 8px; width: 34px; height: 30px; flex: 0 0 34px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 10px rgba(255, 65, 108, 0.4); cursor: pointer; margin-left: 12px;" title="Boss Mode - Deliver All">
-<ion-icon name="planet" style="font-size: 18px;"></ion-icon>
-</div>
-<div class="gold-3d-btn" onclick="app.handleSearch({key: 'Enter'})" style="border-radius: 8px; width: 34px; height: 30px; flex: 0 0 34px; display: flex; align-items: center; justify-content: center; margin-left: 8px; cursor: pointer;">
-<ion-icon name="arrow-forward-outline" style="font-size: 18px; font-weight: bold;"></ion-icon>
-</div>
+<ion-icon name="arrow-forward-outline" onclick="app.handleSearch({key: 'Enter'})" style="color: var(--text-secondary); font-size: 20px; cursor: pointer; margin-left:12px;"></ion-icon>
 </div>
 <div onwheel="event.preventDefault(); this.scrollLeft += event.deltaY;" style="display: flex; gap: 8px; overflow-x: auto; margin-top: 14px; padding-bottom: 8px; scrollbar-width: none; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain;">
 <div onclick="app.navigateTab(event, 'search-screen')" style="border: 1px solid var(--accent-color); color: var(--accent-color); background: rgba(212, 175, 55, 0.05); padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: 500; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 5px;">
 <ion-icon name="star" style="font-size: 13px;"></ion-icon> Top Rated
                             </div>
-<div onclick="app.navigateTab(event, 'search-screen')" style="border: 1px solid var(--accent-color); color: var(--accent-color); background: rgba(212, 175, 55, 0.05); padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: 500; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 5px;">
-<ion-icon name="ribbon" style="font-size: 13px;"></ion-icon> Michelin Star
+                            <div onclick="app.navigateTab(event, 'search-screen')" style="border: 1px solid var(--accent-color); color: var(--accent-color); background: rgba(212, 175, 55, 0.05); padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: 500; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                                <ion-icon name="ribbon" style="font-size: 13px;"></ion-icon> Michelin Star
+                            </div>
+                            <div onclick="app.activateBossMode()" style="border: 1px solid rgba(255, 65, 108, 0.5); color: white; background: linear-gradient(135deg, rgba(255, 75, 43, 0.2), rgba(255, 65, 108, 0.2)); padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: 500; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 5px; box-shadow: 0 0 10px rgba(255, 65, 108, 0.2);" title="Boss Mode - Deliver All">
+                                <ion-icon name="planet" style="font-size: 13px; color:#FF4B2B;"></ion-icon> Boss Mode
                             </div>
 <div onclick="app.navigateTab(event, 'search-screen')" style="border: 1px solid rgba(255,255,255,0.1); color: var(--text-secondary); background: rgba(20, 20, 20, 0.9); padding: 8px 14px; border-radius: 20px; font-size: 12px; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 5px;">
 <ion-icon name="location" style="font-size: 13px;"></ion-icon> Near Me
@@ -135,9 +133,9 @@
 <div class="ratings-header-inner" style="text-align: center;">
 <p style="margin: 0 0 10px; font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-secondary); font-weight: 500;">AI Verified Scores</p>
 <div style="display: flex; gap: 10px; justify-content: center;">
-<span class="rating-chip yelp"><ion-icon name="star"></ion-icon> 4.8 Yelp</span>
-<span class="rating-chip uber"><ion-icon name="star"></ion-icon> 4.9 Eats</span>
-<span class="rating-chip reddit"><ion-icon name="flame"></ion-icon> 10/10 Reddit</span>
+<span class="rating-chip yelp"><img src="Yelp_Logo.svg.png" style="height: 24px; vertical-align: middle; margin-right: 6px; border-radius: 4px;"> 4.8</span>
+<span class="rating-chip uber"><img src="uber eats.jpeg" style="height: 24px; vertical-align: middle; margin-right: 6px; border-radius: 4px; mix-blend-mode: multiply;"> 4.9</span>
+<span class="rating-chip reddit"><img src="reddit.png" style="height: 24px; vertical-align: middle; margin-right: 6px; border-radius: 4px;"> 10/10</span>
 </div>
 </div>
 </div>
@@ -403,7 +401,7 @@
 <ion-icon name="fast-food-outline" style="color: var(--accent-color); font-size: 20px; margin-right: 12px;"></ion-icon>
 <ion-icon class="mic-icon" name="mic" onclick="app.triggerVoiceConcierge()" style="color: var(--text-secondary); font-size: 18px; cursor: pointer;"></ion-icon>
 <input onkeypress="app.handleOpenAICommand(event)" placeholder='Try "Top Pizza", "Trending Favorites"...' style="background: transparent; border: none; color: var(--text-primary); flex: 1; margin-left: 8px; margin-right: 12px; outline: none; font-size: 15px;" type="text"/>
-<div onclick="app.handleOpenAICommand({key:'Enter', preventDefault: ()=&gt;{}})" style="background: var(--accent-color); color: #000; border-radius: 50%; width: 28px; min-width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(212, 175, 55, 0.4); cursor: pointer;">
+<div onclick="app.handleOpenAICommand({key:'Enter'})" style="background: var(--accent-color); color: #000; border-radius: 50%; width: 28px; min-width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(212, 175, 55, 0.4); cursor: pointer;">
 <ion-icon name="arrow-forward-outline" style="font-size: 16px; font-weight: bold;"></ion-icon>
 </div>
 </div>
@@ -827,19 +825,17 @@
 <div class="ai-command-panel" id="ai-command-panel" style="background-color: var(--panel-glass); backdrop-filter: blur(16px); padding: 12px 16px; border-radius: 12px; border: 1px solid var(--panel-border); display: flex; align-items: center; justify-content: space-between; flex-wrap: nowrap; box-sizing: border-box; box-shadow: 0 8px 32px rgba(0,0,0,0.6); width: 100%;">
 <ion-icon name="mic-outline" onclick="app.triggerVoiceConcierge()" style="color: var(--accent-color); font-size: 20px; margin-right: 12px; flex-shrink: 0; cursor: pointer;"></ion-icon>
 <input autocomplete="off" id="cmdField" oninput="app.handleCommandInput(event)" onkeydown="app.handleSearch(event)" placeholder="Search restaurants, cuisines..." style="background: transparent; border: none; color: var(--text-primary); font-size: 14px; flex: 1 1 auto; min-width: 0; outline: none; caret-color: var(--accent-color); width: 100%;" type="text"/>
-<div class="status-ribbon collection-fab" onclick="app.activateBossMode()" style="background: linear-gradient(135deg, #FF4B2B, #FF416C); color: white; border-radius: 8px; width: 34px; height: 30px; flex: 0 0 34px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 10px rgba(255, 65, 108, 0.4); cursor: pointer; margin-left: 12px;" title="Boss Mode - Deliver All">
-<ion-icon name="planet" style="font-size: 18px;"></ion-icon>
-</div>
-<div class="gold-3d-btn" onclick="app.handleSearch({key: 'Enter'})" style="border-radius: 8px; width: 34px; height: 30px; flex: 0 0 34px; display: flex; align-items: center; justify-content: center; margin-left: 8px; cursor: pointer;">
-<ion-icon name="arrow-forward-outline" style="font-size: 18px; font-weight: bold;"></ion-icon>
-</div>
+<ion-icon name="arrow-forward-outline" onclick="app.handleSearch({key: 'Enter'})" style="color: var(--text-secondary); font-size: 20px; cursor: pointer; margin-left:12px;"></ion-icon>
 </div>
 <div onwheel="event.preventDefault(); this.scrollLeft += event.deltaY;" style="display: flex; gap: 8px; overflow-x: auto; margin-top: 14px; padding-bottom: 8px; scrollbar-width: none; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain;">
 <div onclick="app.navigateTab(event, 'search-screen')" style="border: 1px solid var(--accent-color); color: var(--accent-color); background: rgba(212, 175, 55, 0.05); padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: 500; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 5px;">
 <ion-icon name="star" style="font-size: 13px;"></ion-icon> Top Rated
                             </div>
-<div onclick="app.navigateTab(event, 'search-screen')" style="border: 1px solid var(--accent-color); color: var(--accent-color); background: rgba(212, 175, 55, 0.05); padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: 500; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 5px;">
-<ion-icon name="ribbon" style="font-size: 13px;"></ion-icon> Michelin Star
+                            <div onclick="app.navigateTab(event, 'search-screen')" style="border: 1px solid var(--accent-color); color: var(--accent-color); background: rgba(212, 175, 55, 0.05); padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: 500; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                                <ion-icon name="ribbon" style="font-size: 13px;"></ion-icon> Michelin Star
+                            </div>
+                            <div onclick="app.activateBossMode()" style="border: 1px solid rgba(255, 65, 108, 0.5); color: white; background: linear-gradient(135deg, rgba(255, 75, 43, 0.2), rgba(255, 65, 108, 0.2)); padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: 500; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 5px; box-shadow: 0 0 10px rgba(255, 65, 108, 0.2);" title="Boss Mode - Deliver All">
+                                <ion-icon name="planet" style="font-size: 13px; color:#FF4B2B;"></ion-icon> Boss Mode
                             </div>
 <div onclick="app.navigateTab(event, 'search-screen')" style="border: 1px solid rgba(255,255,255,0.1); color: var(--text-secondary); background: rgba(20, 20, 20, 0.9); padding: 8px 14px; border-radius: 20px; font-size: 12px; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 5px;">
 <ion-icon name="location" style="font-size: 13px;"></ion-icon> Near Me
@@ -866,9 +862,9 @@
 <div class="ratings-header-inner" style="text-align: center;">
 <p style="margin: 0 0 10px; font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-secondary); font-weight: 500;">AI Verified Scores</p>
 <div style="display: flex; gap: 10px; justify-content: center;">
-<span class="rating-chip yelp" id="rh-yelp"><img src="Yelp_Logo.svg.png" style="height: 14px; vertical-align: middle; margin-right: 4px; border-radius: 2px;"> 4.8</span>
-<span class="rating-chip uber" id="rh-uber"><img src="uber eats.jpeg" style="height: 14px; vertical-align: middle; margin-right: 4px; border-radius: 2px; mix-blend-mode: multiply;"> 4.9</span>
-<span class="rating-chip reddit" id="rh-reddit"><img src="reddit.png" style="height: 14px; vertical-align: middle; margin-right: 4px; border-radius: 2px;"> 10/10</span>
+<span class="rating-chip yelp" id="rh-yelp"><img src="Yelp_Logo.svg.png" style="height: 24px; vertical-align: middle; margin-right: 6px; border-radius: 4px;"> 4.8</span>
+<span class="rating-chip uber" id="rh-uber"><img src="uber eats.jpeg" style="height: 24px; vertical-align: middle; margin-right: 6px; border-radius: 4px; mix-blend-mode: multiply;"> 4.9</span>
+<span class="rating-chip reddit" id="rh-reddit"><img src="reddit.png" style="height: 24px; vertical-align: middle; margin-right: 6px; border-radius: 4px;"> 10/10</span>
 </div>
 </div>
 </div>
@@ -1134,7 +1130,7 @@
 <ion-icon name="fast-food-outline" style="color: var(--accent-color); font-size: 20px; margin-right: 12px;"></ion-icon>
 <ion-icon class="mic-icon" name="mic" onclick="app.triggerVoiceConcierge()" style="color: var(--text-secondary); font-size: 18px; cursor: pointer;"></ion-icon>
 <input id="searchCmdField" onkeypress="app.handleOpenAICommand(event)" placeholder='Try "Top Pizza", "Trending Favorites"...' style="background: transparent; border: none; color: var(--text-primary); flex: 1; margin-left: 8px; margin-right: 12px; outline: none; font-size: 15px;" type="text"/>
-<div onclick="app.handleOpenAICommand({key:'Enter', preventDefault: ()=&gt;{}})" style="background: var(--accent-color); color: #000; border-radius: 50%; width: 28px; min-width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(212, 175, 55, 0.4); cursor: pointer;">
+<div onclick="app.handleOpenAICommand({key:'Enter'})" style="background: var(--accent-color); color: #000; border-radius: 50%; width: 28px; min-width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(212, 175, 55, 0.4); cursor: pointer;">
 <ion-icon name="arrow-forward-outline" style="font-size: 16px; font-weight: bold;"></ion-icon>
 </div>
 </div>
@@ -1525,7 +1521,7 @@
 </div>
 <div style="text-align: center; margin-bottom: 25px;">
 <button class="glass-btn" onclick="document.getElementById('rate-marketplace-panel').classList.add('visible'); document.getElementById('rate-marketplace-panel').classList.remove('hidden');" style="background: rgba(255, 255, 255, 0.05); padding: 4px 10px; font-size: 10px; border-radius: 12px; display: inline-flex; align-items: center; gap: 4px; border: 1px solid rgba(255, 255, 255, 0.1); color: var(--text-secondary); cursor: pointer;">
-<ion-icon name="swap-horizontal-outline"></ion-icon> Open Rate Marketplace
+<ion-icon name="swap-horizontal-outline"></ion-icon> Schedule Instead
                     </button>
 </div>
 <!-- Step-by-Step Timeline -->
@@ -1557,22 +1553,13 @@
 <!-- Header -->
 <div class="rmp-header">
 <div class="rmp-header-top">
-<h2>Rate Marketplace</h2>
+<h2>Schedule</h2>
 <span class="rmp-badge" id="rmp-status-badge">
 <span class="pulse-dot"></span> Scanning
                 </span>
 </div>
 <div class="rmp-route-label" id="rmp-route-label">
 <span>Awaiting route data</span>
-</div>
-<!-- Tabs -->
-<div class="rmp-tabs" id="rmp-tabs">
-<button class="rmp-tab active" data-tab="flights" onclick="app.switchRateTab('flights')">
-<ion-icon name="airplane"></ion-icon> Flights
-                </button>
-<button class="rmp-tab" data-tab="rides" onclick="app.switchRateTab('rides')">
-<ion-icon name="car-sport"></ion-icon> Rides
-                </button>
 </div>
 </div>
 <!-- Scrollable Content -->
@@ -1587,28 +1574,8 @@
 </div>
 <!-- ACTIVE STATE -->
 <div id="rmp-active" style="display: none;">
-<!-- Flights Tab -->
-<div class="rmp-tab-content active" id="rmp-flights-tab">
-<div class="rmp-provider-list" id="rmp-flight-list">
+<div class="rmp-provider-list" id="rmp-schedule-list">
 <!-- Populated dynamically -->
-</div>
-</div>
-<!-- Rides Tab -->
-<div class="rmp-tab-content" id="rmp-rides-tab">
-<div class="rmp-section-header">
-<ion-icon name="location-outline"></ion-icon>
-<span>Pickup Leg</span>
-</div>
-<div class="rmp-provider-list" id="rmp-pickup-rides">
-<!-- Populated dynamically -->
-</div>
-<div class="rmp-section-header" style="margin-top: 16px;">
-<ion-icon name="flag-outline"></ion-icon>
-<span>Delivery Leg</span>
-</div>
-<div class="rmp-provider-list" id="rmp-delivery-rides">
-<!-- Populated dynamically -->
-</div>
 </div>
 </div>
 </div>
