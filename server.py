@@ -74,36 +74,37 @@ else:
 # Airport Database (city -> IATA code mapping)
 # ---------------------------------------------------------------------------
 AIRPORT_MAP = {
-    "new york":       {"iata": "EWR", "name": "Newark Liberty International",    "alt": "JFK", "lat": 40.6895, "lon": -74.1745},
-    "nyc":            {"iata": "JFK", "name": "John F. Kennedy International",   "alt": "EWR", "lat": 40.6413, "lon": -73.7781},
-    "manhattan":      {"iata": "EWR", "name": "Newark Liberty International",    "alt": "LGA", "lat": 40.6895, "lon": -74.1745},
-    "los angeles":    {"iata": "LAX", "name": "Los Angeles International",       "alt": None,  "lat": 33.9425, "lon": -118.408},
-    "la":             {"iata": "LAX", "name": "Los Angeles International",       "alt": None,  "lat": 33.9425, "lon": -118.408},
-    "beverly hills":  {"iata": "LAX", "name": "Los Angeles International",       "alt": None,  "lat": 33.9425, "lon": -118.408},
-    "san francisco":  {"iata": "SFO", "name": "San Francisco International",     "alt": "OAK", "lat": 37.6213, "lon": -122.379},
-    "chicago":        {"iata": "ORD", "name": "O'Hare International",            "alt": "MDW", "lat": 41.9742, "lon": -87.9073},
-    "miami":          {"iata": "MIA", "name": "Miami International",             "alt": "FLL", "lat": 25.7959, "lon": -80.2870},
-    "dallas":         {"iata": "DFW", "name": "Dallas/Fort Worth International", "alt": "DAL", "lat": 32.8998, "lon": -97.0403},
-    "houston":        {"iata": "IAH", "name": "George Bush Intercontinental",    "alt": "HOU", "lat": 29.9902, "lon": -95.3368},
-    "seattle":        {"iata": "SEA", "name": "Seattle-Tacoma International",    "alt": None,  "lat": 47.4502, "lon": -122.309},
-    "denver":         {"iata": "DEN", "name": "Denver International",            "alt": None,  "lat": 39.8561, "lon": -104.673},
-    "atlanta":        {"iata": "ATL", "name": "Hartsfield-Jackson Atlanta",      "alt": None,  "lat": 33.6407, "lon": -84.4277},
-    "boston":         {"iata": "BOS", "name": "Boston Logan International",       "alt": None,  "lat": 42.3656, "lon": -71.0096},
-    "washington":     {"iata": "IAD", "name": "Dulles International",            "alt": "DCA", "lat": 38.9531, "lon": -77.4565},
-    "dc":             {"iata": "DCA", "name": "Reagan National",                 "alt": "IAD", "lat": 38.8512, "lon": -77.0402},
-    "phoenix":        {"iata": "PHX", "name": "Phoenix Sky Harbor",              "alt": None,  "lat": 33.4373, "lon": -112.008},
-    "las vegas":      {"iata": "LAS", "name": "Harry Reid International",        "alt": None,  "lat": 36.0840, "lon": -115.153},
-    "orlando":        {"iata": "MCO", "name": "Orlando International",           "alt": None,  "lat": 28.4312, "lon": -81.3081},
-    "portland, me":   {"iata": "PWM", "name": "Portland International Jetport",  "alt": None,  "lat": 43.6461, "lon": -70.3093},
-    "portland":       {"iata": "PDX", "name": "Portland International",          "alt": None,  "lat": 45.5898, "lon": -122.596},
-    "nashville":      {"iata": "BNA", "name": "Nashville International",         "alt": None,  "lat": 36.1263, "lon": -86.6774},
-    "austin":         {"iata": "AUS", "name": "Austin-Bergstrom International",  "alt": None,  "lat": 30.1975, "lon": -97.6664},
-    "san diego":      {"iata": "SAN", "name": "San Diego International",         "alt": None,  "lat": 32.7338, "lon": -117.190},
-    "minneapolis":    {"iata": "MSP", "name": "Minneapolis-St Paul International","alt": None, "lat": 44.8848, "lon": -93.2223},
-    "detroit":        {"iata": "DTW", "name": "Detroit Metropolitan",            "alt": None,  "lat": 42.2162, "lon": -83.3554},
-    "philadelphia":   {"iata": "PHL", "name": "Philadelphia International",      "alt": None,  "lat": 39.8744, "lon": -75.2424},
-    "charlotte":      {"iata": "CLT", "name": "Charlotte Douglas International", "alt": None,  "lat": 35.2140, "lon": -80.9431},
-    "salt lake city": {"iata": "SLC", "name": "Salt Lake City International",    "alt": None,  "lat": 40.7884, "lon": -111.977},
+    "new york":       {"iata": "EWR", "name": "Newark Liberty International",    "alt": "JFK", "lat": 40.6895, "lon": -74.1745, "aliases": ["ny", "nj", "brooklyn", "queens", "bronx", "staten island", "new jersey"]},
+    "nyc":            {"iata": "JFK", "name": "John F. Kennedy International",   "alt": "EWR", "lat": 40.6413, "lon": -73.7781, "aliases": []},
+    "manhattan":      {"iata": "EWR", "name": "Newark Liberty International",    "alt": "LGA", "lat": 40.6895, "lon": -74.1745, "aliases": []},
+    "los angeles":    {"iata": "LAX", "name": "Los Angeles International",       "alt": None,  "lat": 33.9425, "lon": -118.408, "aliases": ["ca", "california", "santa monica", "hollywood", "orange county"]},
+    "la":             {"iata": "LAX", "name": "Los Angeles International",       "alt": None,  "lat": 33.9425, "lon": -118.408, "aliases": []},
+    "beverly hills":  {"iata": "LAX", "name": "Los Angeles International",       "alt": None,  "lat": 33.9425, "lon": -118.408, "aliases": []},
+    "san francisco":  {"iata": "SFO", "name": "San Francisco International",     "alt": "OAK", "lat": 37.6213, "lon": -122.379, "aliases": ["sf", "bay area", "oakland", "san jose"]},
+    "chicago":        {"iata": "ORD", "name": "O'Hare International",            "alt": "MDW", "lat": 41.9742, "lon": -87.9073, "aliases": ["il", "illinois", "river grove", "evanston", "naperville", "oak park"]},
+    "miami":          {"iata": "MIA", "name": "Miami International",             "alt": "FLL", "lat": 25.7959, "lon": -80.2870, "aliases": ["fl", "florida", "fort lauderdale", "boca raton", "palm beach"]},
+    "dallas":         {"iata": "DFW", "name": "Dallas/Fort Worth International", "alt": "DAL", "lat": 32.8998, "lon": -97.0403, "aliases": ["tx", "texas", "fort worth", "plano", "arlington"]},
+    "houston":        {"iata": "IAH", "name": "George Bush Intercontinental",    "alt": "HOU", "lat": 29.9902, "lon": -95.3368, "aliases": ["katy", "sugar land", "spring"]},
+    "seattle":        {"iata": "SEA", "name": "Seattle-Tacoma International",    "alt": None,  "lat": 47.4502, "lon": -122.309, "aliases": ["wa", "washington", "bellevue", "redmond", "tacoma"]},
+    "denver":         {"iata": "DEN", "name": "Denver International",            "alt": None,  "lat": 39.8561, "lon": -104.673, "aliases": ["co", "colorado", "boulder", "aurora"]},
+    "atlanta":        {"iata": "ATL", "name": "Hartsfield-Jackson Atlanta",      "alt": None,  "lat": 33.6407, "lon": -84.4277, "aliases": ["ga", "georgia", "marietta", "alpharetta", "decatur"]},
+    "boston":         {"iata": "BOS", "name": "Boston Logan International",       "alt": None,  "lat": 42.3656, "lon": -71.0096, "aliases": ["ma", "massachusetts", "cambridge", "somerville", "quincy"]},
+    "washington":     {"iata": "IAD", "name": "Dulles International",            "alt": "DCA", "lat": 38.9531, "lon": -77.4565, "aliases": []},
+    "dc":             {"iata": "DCA", "name": "Reagan National",                 "alt": "IAD", "lat": 38.8512, "lon": -77.0402, "aliases": ["va", "virginia", "md", "maryland", "arlington", "alexandria", "bethesda"]},
+    "phoenix":        {"iata": "PHX", "name": "Phoenix Sky Harbor",              "alt": None,  "lat": 33.4373, "lon": -112.008, "aliases": ["az", "arizona", "scottsdale", "tempe", "mesa", "chandler"]},
+    "las vegas":      {"iata": "LAS", "name": "Harry Reid International",        "alt": None,  "lat": 36.0840, "lon": -115.153, "aliases": ["nv", "nevada", "henderson"]},
+    "orlando":        {"iata": "MCO", "name": "Orlando International",           "alt": None,  "lat": 28.4312, "lon": -81.3081, "aliases": ["kissimmee", "winter park"]},
+    "portland, me":   {"iata": "PWM", "name": "Portland International Jetport",  "alt": None,  "lat": 43.6461, "lon": -70.3093, "aliases": ["me", "maine"]},
+    "portland":       {"iata": "PDX", "name": "Portland International",          "alt": None,  "lat": 45.5898, "lon": -122.596, "aliases": ["or", "oregon", "beaverton", "hillsboro"]},
+    "nashville":      {"iata": "BNA", "name": "Nashville International",         "alt": None,  "lat": 36.1263, "lon": -86.6774, "aliases": ["tn", "tennessee", "franklin", "brentwood"]},
+    "austin":         {"iata": "AUS", "name": "Austin-Bergstrom International",  "alt": None,  "lat": 30.1975, "lon": -97.6664, "aliases": ["round rock", "georgetown"]},
+    "san diego":      {"iata": "SAN", "name": "San Diego International",         "alt": None,  "lat": 32.7338, "lon": -117.190, "aliases": ["la jolla", "chula vista", "carlsbad"]},
+    "minneapolis":    {"iata": "MSP", "name": "Minneapolis-St Paul International","alt": None, "lat": 44.8848, "lon": -93.2223, "aliases": ["mn", "minnesota", "st paul", "bloomington"]},
+    "detroit":        {"iata": "DTW", "name": "Detroit Metropolitan",            "alt": None,  "lat": 42.2162, "lon": -83.3554, "aliases": ["mi", "michigan", "ann arbor", "dearborn"]},
+    "philadelphia":   {"iata": "PHL", "name": "Philadelphia International",      "alt": None,  "lat": 39.8744, "lon": -75.2424, "aliases": ["pa", "pennsylvania", "camden"]},
+    "charlotte":      {"iata": "CLT", "name": "Charlotte Douglas International", "alt": None,  "lat": 35.2140, "lon": -80.9431, "aliases": ["nc", "north carolina", "concord"]},
+    "salt lake city": {"iata": "SLC", "name": "Salt Lake City International",    "alt": None,  "lat": 40.7884, "lon": -111.977, "aliases": ["ut", "utah", "provo", "west valley city"]},
+    "new orleans":    {"iata": "MSY", "name": "Louis Armstrong New Orleans",     "alt": None,  "lat": 29.9922, "lon": -90.2580, "aliases": ["la", "louisiana", "metairie", "kenner"]},
 }
 
 def resolve_airport(city_text):
@@ -125,12 +126,19 @@ def resolve_airport(city_text):
         if re.search(r'\b' + re.escape(key) + r'\b', city_lower):
             return val
             
-    # 4. Fallback: try to match partial words
+    # 5. Look through aliases (state codes, sprawling suburbs)
+    import re
+    # We check state/suburb aliases last to catch "Gene & Jude's, River Grove, IL"
+    # By searching the entire input text against our alias bag
     for key, val in AIRPORT_MAP.items():
-        words = key.split()
-        if any(w in city_lower for w in words if len(w) > 3):
-            return val
-    return None
+        if "aliases" in val:
+            for alias in val["aliases"]:
+                # Match strict word boundary for state abbreviations (e.g. \bil\b)
+                if re.search(r'\b' + re.escape(alias) + r'\b', city_lower):
+                    return val
+    
+    # 6. Ultimate fallback: if we absolutely cannot find it, return Chicago ORD so the app doesn't break
+    return AIRPORT_MAP["chicago"]
 
 # ---------------------------------------------------------------------------
 # Distance Calculation (Haversine)

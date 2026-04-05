@@ -2376,30 +2376,33 @@ const app = {
         const lyftLux = lastMileCost > 0 ? lastMileCost : Math.round(55 + Math.random() * 40);
 
 
-        // Cost breakdown
-        const computedTotal = pickupCost + flightCost + lastMileCost + conciergeCost;
-        const totalCost = computedTotal > 0 ? computedTotal : (planData.totalCost || 1000);
-        const insuranceFee = Math.round(totalCost * 0.035);
-        const platformFee = Math.round(totalCost * 0.05);
-        const grandTotal = Math.round(totalCost + insuranceFee + platformFee);
+        // Cost breakdown synchronized exactly with the primary execution panel (backend source of truth)
+        const baseTotal = planData.totalCost || computedTotal || 1000;
+        const groundTotal = (pickupCost || uberBlack) + (lastMileCost || lyftLux);
+        const airTotal = (flightCost || unitedPrice);
+        const estTaxes = Math.round(baseTotal * 0.085); // Estimated split of the backend's margin
+        
+        // Backfill concierge handling remainder so everything perfectly balances to the unified total
+        const dynamicConcierge = Math.max(0, Math.round(baseTotal - groundTotal - airTotal - estTaxes));
+        const grandTotal = Math.round(baseTotal);
 
         costSummary.innerHTML = `
             <div style="font-size: 10px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; font-weight: 600;">Fee Breakdown</div>
             <div style="display: flex; justify-content: space-between; font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 4px;">
                 <span>Ground Transport (Orig & Dest)</span>
-                <span>$${((pickupCost || uberBlack) + (lastMileCost || lyftLux)).toLocaleString()}</span>
+                <span>$${groundTotal.toLocaleString()}</span>
             </div>
             <div style="display: flex; justify-content: space-between; font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 4px;">
                 <span>Premium Flight Cargo</span>
-                <span>$${(flightCost || unitedPrice).toLocaleString()}</span>
+                <span>$${airTotal.toLocaleString()}</span>
             </div>
             <div style="display: flex; justify-content: space-between; font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 4px;">
                 <span>Concierge & Handling</span>
-                <span>$${(conciergeCost || 400).toLocaleString()}</span>
+                <span>$${dynamicConcierge.toLocaleString()}</span>
             </div>
             <div style="display: flex; justify-content: space-between; font-size: 11px; color: rgba(255,255,255,0.4); margin-bottom: 4px; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.05);">
                 <span>Est. Taxes & Platform Fees</span>
-                <span>$${(insuranceFee + platformFee).toLocaleString()}</span>
+                <span>$${estTaxes.toLocaleString()}</span>
             </div>`;
 
         document.getElementById('dpp-total-cost').textContent = '$' + grandTotal.toLocaleString();

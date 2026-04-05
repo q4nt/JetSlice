@@ -197,7 +197,9 @@ body {
     line-height: 1.1;
     margin-bottom: 8px;
     -webkit-mask-image: linear-gradient(-75deg, rgba(0,0,0,1) 30%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,1) 70%);
+    mask-image: linear-gradient(-75deg, rgba(0,0,0,1) 30%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,1) 70%);
     -webkit-mask-size: 200%;
+    mask-size: 200%;
     animation: shimmerMask 4s infinite linear;
 }
 .hero-section h1 span {
@@ -329,7 +331,9 @@ body {
     color: var(--text-secondary);
     margin-bottom: 8px;
     -webkit-mask-image: linear-gradient(-75deg, rgba(0,0,0,1) 30%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,1) 70%);
+    mask-image: linear-gradient(-75deg, rgba(0,0,0,1) 30%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,1) 70%);
     -webkit-mask-size: 200%;
+    mask-size: 200%;
     animation: shimmerMask 4s infinite linear;
 }
 .item-select select,
@@ -446,7 +450,9 @@ body {
     color: var(--text-secondary);
     margin-bottom: 8px;
     -webkit-mask-image: linear-gradient(-75deg, rgba(0,0,0,1) 30%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,1) 70%);
+    mask-image: linear-gradient(-75deg, rgba(0,0,0,1) 30%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,1) 70%);
     -webkit-mask-size: 200%;
+    mask-size: 200%;
     animation: shimmerMask 4s infinite linear;
 }
 .cost-item {
@@ -461,7 +467,9 @@ body {
     gap: 8px;
     margin-bottom: 8px;
     -webkit-mask-image: linear-gradient(-75deg, rgba(0,0,0,1) 30%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,1) 70%);
+    mask-image: linear-gradient(-75deg, rgba(0,0,0,1) 30%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,1) 70%);
     -webkit-mask-size: 200%;
+    mask-size: 200%;
     animation: shimmerMask 4s infinite linear;
 }
 .badge {
@@ -1386,7 +1394,10 @@ body.light-theme {
 
 /* Shimmer loading effect for awaiting data */
 @keyframes shimmerMask {
-    to { -webkit-mask-position: 200% center; }
+    to { 
+        -webkit-mask-position: 200% center; 
+        mask-position: 200% center;
+    }
 }
 
 /* ====== RATE MARKETPLACE PANEL ====== */
