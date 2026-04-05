@@ -93,6 +93,7 @@ AIRPORT_MAP = {
     "phoenix":        {"iata": "PHX", "name": "Phoenix Sky Harbor",              "alt": None,  "lat": 33.4373, "lon": -112.008},
     "las vegas":      {"iata": "LAS", "name": "Harry Reid International",        "alt": None,  "lat": 36.0840, "lon": -115.153},
     "orlando":        {"iata": "MCO", "name": "Orlando International",           "alt": None,  "lat": 28.4312, "lon": -81.3081},
+    "portland, me":   {"iata": "PWM", "name": "Portland International Jetport",  "alt": None,  "lat": 43.6461, "lon": -70.3093},
     "portland":       {"iata": "PDX", "name": "Portland International",          "alt": None,  "lat": 45.5898, "lon": -122.596},
     "nashville":      {"iata": "BNA", "name": "Nashville International",         "alt": None,  "lat": 36.1263, "lon": -86.6774},
     "austin":         {"iata": "AUS", "name": "Austin-Bergstrom International",  "alt": None,  "lat": 30.1975, "lon": -97.6664},
@@ -107,11 +108,23 @@ AIRPORT_MAP = {
 def resolve_airport(city_text):
     """Resolve a city name or address to the nearest airport."""
     city_lower = city_text.lower().strip()
-    # Direct match
+    
+    # 1. Full exact match (Prioritize explicitly passed states e.g. "Portland, ME")
+    if city_lower in AIRPORT_MAP:
+        return AIRPORT_MAP[city_lower]
+        
+    # 2. Clean up standard formatting "City, ST" -> "city"
+    primary_city = city_lower.split(',')[0].strip()
+    if primary_city in AIRPORT_MAP:
+        return AIRPORT_MAP[primary_city]
+        
+    # 3. Strict word boundary match (prevents "la" from hijacking "Dallas" or "Atlanta")
+    import re
     for key, val in AIRPORT_MAP.items():
-        if key in city_lower:
+        if re.search(r'\b' + re.escape(key) + r'\b', city_lower):
             return val
-    # Fallback: try to match partial words
+            
+    # 4. Fallback: try to match partial words
     for key, val in AIRPORT_MAP.items():
         words = key.split()
         if any(w in city_lower for w in words if len(w) > 3):
@@ -147,7 +160,7 @@ def search_gds_flights(origin_iata, dest_iata, departure_date=None):
     # --- Try SerpAPI (Google Flights Live) ---
     if SERPAPI_KEY:
         try:
-            url = f"https://serpapi.com/search.json?engine=google_flights&departure_id={origin_iata}&arrival_id={dest_iata}&outbound_date={departure_date}&type=2&api_key={SERPAPI_KEY}"
+            url = f"https://serpapi.com/search.json?engine=google_flights&departure_id={origin_iata}&arrival_id={dest_iata}&outbound_date={departure_date}&type=2&stops=1&api_key={SERPAPI_KEY}"
             resp = requests.get(url, timeout=15)
             if resp.status_code == 200:
                 data = resp.json()
@@ -156,7 +169,7 @@ def search_gds_flights(origin_iata, dest_iata, departure_date=None):
                     flight_results = data.get("other_flights", [])
                 
                 parsed_flights = []
-                for offer in flight_results[:5]:  # Take top 5
+                for offer in flight_results[:8]:  # Take top 8
                     if "flights" not in offer or not offer["flights"]:
                         continue
                     
@@ -174,24 +187,45 @@ def search_gds_flights(origin_iata, dest_iata, departure_date=None):
                     if len(dep_time) == 16: dep_time = dep_time.replace(" ", "T") + ":00"
                     if len(arr_time) == 16: arr_time = arr_time.replace(" ", "T") + ":00"
                     
+                    # Format departure time strings for the frontend
+                    try:
+                        dept_obj = datetime.strptime(dep_time, '%Y-%m-%dT%H:%M:%S')
+                        dept_str = dept_obj.strftime('%I:%M %p').lstrip('0')
+                    except Exception:
+                        dept_str = dep_time.split('T')[1][:5] if 'T' in dep_time else "TBD"
+
+                    # Brand colors
+                    COLORS = {
+                        "UA": "#005DAA", "WN": "#E24726", "B6": "#0033A0",
+                        "DL": "#003A70", "AA": "#B61F23", "NK": "#FFD200",
+                        "F9": "#004225", "AS": "#01426A", "SY": "#003E7E",
+                        "HA": "#331661"
+                    }
+                    color = COLORS.get(carrier_code, "#4ade80")
+                    
                     price = float(offer.get("price", 400))
                     dur_min = offer.get("total_duration", 120)
                     
+                    # Ensure formatting matches what app.js Rate Marketplace expects
                     parsed_flights.append({
                         "airline": airline_name,
                         "carrier_code": carrier_code,
+                        "code": carrier_code,
+                        "color": color,
                         "flight_number": flight_num.replace(" ", ""),
+                        "flightNum": flight_num,
                         "origin": origin_iata,
                         "destination": dest_iata,
                         "departure_time": dep_time,
+                        "dept": dept_str,
                         "arrival_time": arr_time,
                         "duration": f"PT{dur_min // 60}H{dur_min % 60}M",
                         "stops": len(segments) - 1,
-                        "price": round(price * 2.8, 2) if price < 300 else price, # Simulated First Class
+                        "price": round(price * 2.8, 2) if price < 300 else round(price, 2), # Simulated First Class Cost
                         "price_economy": round(price, 2),
                         "currency": "USD",
-                        "cabin": "FIRST",
-                        "source": "serpapi_live",
+                        "cabin": "First Class Cargo" if price < 300 else "Premium Cargo",
+                        "source": "SerpApi Live",
                         "bookable": True
                     })
                 
@@ -210,6 +244,7 @@ def search_gds_flights(origin_iata, dest_iata, departure_date=None):
                 departureDate=departure_date,
                 adults=1,
                 max=5,
+                nonStop=True,
                 includedAirlineCodes='UA,AA'  # Filter to United and American Airlines
             )
             flights = []
@@ -369,7 +404,7 @@ def search_southwest_fares(origin_iata, dest_iata, departure_date=None):
         "destination": dest_iata,
         "departure_time": f"{departure_date}T{dep_hour:02d}:15:00",
         "duration": f"PT{int(flight_hours)}H{int((flight_hours % 1)*60)}M",
-        "stops": 0 if distance < 1500 else 1,
+        "stops": 0,
         "fares": {
             "wanna_get_away": round(wanna_get_away, 2),
             "anytime": round(anytime, 2),
@@ -577,8 +612,26 @@ def api_route():
     gds_flights = search_gds_flights(orig_airport['iata'], dest_airport['iata'], date)
     southwest = search_southwest_fares(orig_airport['iata'], dest_airport['iata'], date)
 
+    # Filter flights for TSA Clearance & Prep (Prep + Uber + 2-3 hours)
+    from datetime import datetime, timedelta
+    valid_flights = []
+    
+    # 30m prep + uber transit + 2.5 hour TSA/Terminal queue
+    buffer_minutes = 30 + pickup['estimated_minutes'] + 150
+    now = datetime.now()
+    minimum_departure_time = now + timedelta(minutes=buffer_minutes)
+
+    for flight in gds_flights:
+        try:
+            dep_time = datetime.fromisoformat(flight['departure_time'].replace('Z', '+00:00'))
+            # If flight is today, ensure it passes TSA buffer. If tomorrow, it's valid.
+            if dep_time.timestamp() > minimum_departure_time.timestamp():
+                valid_flights.append(flight)
+        except Exception:
+            valid_flights.append(flight) # Fallback
+
     # Pick best option (first class for premium service)
-    best_flight = gds_flights[0] if gds_flights else None
+    best_flight = valid_flights[0] if valid_flights else (gds_flights[0] if gds_flights else None)
     flight_cost = best_flight['price'] if best_flight else 0
 
     # Southwest comparison price
@@ -597,8 +650,8 @@ def api_route():
 
     return jsonify({
         "route": {
-            "origin": {"city": origin, "airport": orig_airport['name'], "iata": orig_airport['iata']},
-            "destination": {"city": destination, "airport": dest_airport['name'], "iata": dest_airport['iata']},
+            "origin": {"city": origin, "airport": orig_airport['name'], "iata": orig_airport['iata'], "lat": orig_airport['lat'], "lon": orig_airport['lon']},
+            "destination": {"city": destination, "airport": dest_airport['name'], "iata": dest_airport['iata'], "lat": dest_airport['lat'], "lon": dest_airport['lon']},
             "distance_miles": round(distance),
         },
         "legs": [
@@ -642,6 +695,7 @@ def api_route():
                 "icon": "briefcase"
             }
         ],
+        "flights": gds_flights,
         "total_cost": round(total, 2),
         "currency": "USD",
         "data_source": "serpapi_live" if SERPAPI_KEY else "amadeus_live" if amadeus_client else "mock",

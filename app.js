@@ -3,6 +3,26 @@ const app = {
 
     initMap() {
         mapboxgl.accessToken = window.__MAPBOX_TOKEN || 'YOUR_MAPBOX_TOKEN';
+        
+        // Render identical static mapbox globe on the mock screen
+        if (document.getElementById('map-mock')) {
+            this.mapMock = new mapboxgl.Map({
+                container: 'map-mock',
+                style: 'mapbox://styles/mapbox/standard',
+                projection: 'globe',
+                zoom: 3.5,
+                center: [-98.5795, 39.8283],
+                pitch: 45,
+                attributionControl: false
+            });
+            this.mapMock.on('style.load', () => {
+                this.mapMock.setConfigProperty('basemap', 'theme', 'monochrome');
+                this.mapMock.setConfigProperty('basemap', 'lightPreset', 'night');
+                this.mapMock.setConfigProperty('basemap', 'show3dObjects', true);
+            });
+        }
+
+        // Main interactive map instance
         this.map = new mapboxgl.Map({
             container: 'map',
             style: 'mapbox://styles/mapbox/standard',
@@ -24,7 +44,7 @@ const app = {
 
         // Interface fading on map interaction
         this.map.on('mousedown', () => {
-            const hero = document.querySelector('.hero-section');
+            const hero = document.getElementById('active-iphone-simulator').querySelector('.hero-section');
             if (hero && !hero.classList.contains('faded')) {
                 hero.classList.add('faded');
             }
@@ -78,8 +98,13 @@ const app = {
             },
             {
                 type: 'Feature',
-                properties: { emoji: '🦞', restaurant: "Neptune Oyster", origin: "Boston, MA", dest: "Phoenix, AZ", cargo: "refrigerated", foodItem: "Main Lobster Roll (Cold)", ratings: { yelp: '4.7', uberEats: '4.8', reddit: '9.5/10' }, reviewText: "\"Tastes like it was just plucked from the Atlantic. Astounding logistics.\" - Reddit User" },
+                properties: { emoji: '🦪', restaurant: "Neptune Oyster", origin: "Boston, MA", dest: "Phoenix, AZ", cargo: "refrigerated", foodItem: "Wellfleet Oysters (Dozen, Iced)", ratings: { yelp: '4.7', uberEats: '4.8', reddit: '9.5/10' }, reviewText: "\"Tastes like they were just shucked from the Atlantic. Astounding logistics.\" - Reddit User" },
                 geometry: { type: 'Point', coordinates: [-71.0589, 42.3601] }
+            },
+            {
+                type: 'Feature',
+                properties: { emoji: '🦞', restaurant: "Luke's Lobster", origin: "Portland, ME", dest: "Las Vegas, NV", cargo: "refrigerated", foodItem: "Maine Lobster Roll (Cold)", ratings: { yelp: '4.8', uberEats: '4.7', reddit: '9/10' }, reviewText: "\"The chilled lobster meat was absolutely flawless upon arrival in the desert.\" - Uber Eats User" },
+                geometry: { type: 'Point', coordinates: [-70.2568, 43.6591] }
             },
             {
                 type: 'Feature',
@@ -122,20 +147,20 @@ const app = {
                 this._emojiMarkers.push(el);
                 
                 const props = feature.properties;
-                const popup = new mapboxgl.Popup({ offset: 0, closeButton: false, className: 'hidden-popup' }).setHTML(``);
-                
-                popup.on('open', () => {
-                    popup.remove(); 
+
+                // Direct click handler - more reliable than popup.open which breaks after popup.remove()
+                outer.addEventListener('click', (e) => {
+                    e.stopPropagation();
 
                     // Hide ALL emoji markers on the map
-                    document.querySelectorAll('.emoji-marker-outer').forEach(m => m.style.display = 'none');
+                    document.getElementById('active-iphone-simulator').querySelectorAll('.emoji-marker-outer').forEach(m => m.style.display = 'none');
                     if (this._emojiAnimInterval) { clearInterval(this._emojiAnimInterval); this._emojiAnimInterval = null; }
 
                     this._activeEmoji = props.emoji;
 
-                    const hero = document.querySelector('.hero-section');
+                    const hero = document.getElementById('active-iphone-simulator').querySelector('.hero-section');
                     if (hero && !hero.classList.contains('faded')) hero.classList.add('faded');
-                    const aiPanel = document.querySelector('.ai-command-panel');
+                    const aiPanel = document.getElementById('active-iphone-simulator').querySelector('.ai-command-panel');
                     if (aiPanel) aiPanel.style.display = 'none';
 
                     document.getElementById('origin').value = props.origin;
@@ -155,8 +180,21 @@ const app = {
 
                 new mapboxgl.Marker({ element: outer })
                     .setLngLat(feature.geometry.coordinates)
-                    .setPopup(popup)
                     .addTo(this.map);
+
+                // Add to static mock screen for aesthetic parity
+                if (this.mapMock) {
+                    const outerClone = document.createElement('div');
+                    outerClone.className = 'emoji-marker-outer';
+                    const elClone = document.createElement('div');
+                    elClone.className = 'emoji-marker';
+                    elClone.textContent = feature.properties.emoji;
+                    outerClone.appendChild(elClone);
+                    
+                    new mapboxgl.Marker({ element: outerClone })
+                        .setLngLat(feature.geometry.coordinates)
+                        .addTo(this.mapMock);
+                }
             });
         };
 
@@ -369,7 +407,7 @@ const app = {
      * Navigates to a specific screen ID by toggling the 'active' class
      */
     navigateTo(screenId) {
-        document.querySelectorAll('.screen').forEach(screen => {
+        document.getElementById('active-iphone-simulator').querySelectorAll('.screen').forEach(screen => {
             screen.classList.remove('active');
         });
         document.getElementById(screenId).classList.add('active');
@@ -392,13 +430,13 @@ const app = {
      */
     navigateTab(event, screenId) {
         event.preventDefault();
-        document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+        document.getElementById('active-iphone-simulator').querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
         if (event.currentTarget) event.currentTarget.classList.add('active');
         
         // Handle share screen specific UI resets
         if (screenId === 'share-screen') {
-            document.querySelectorAll('.emoji-marker-outer').forEach(m => m.style.display = 'none');
-            document.querySelectorAll('.social-marker').forEach(m => m.style.display = 'none'); // Hidden default
+            document.getElementById('active-iphone-simulator').querySelectorAll('.emoji-marker-outer').forEach(m => m.style.display = 'none');
+            document.getElementById('active-iphone-simulator').querySelectorAll('.social-marker').forEach(m => m.style.display = 'none'); // Hidden default
             
             // Reset share overlays
             const hub = document.getElementById('share-hub-menu');
@@ -408,8 +446,8 @@ const app = {
             if (rec) rec.classList.add('hidden');
             if (bk) bk.classList.add('hidden');
         } else if (screenId !== 'home-screen') {
-            document.querySelectorAll('.social-marker').forEach(m => m.style.display = 'none');
-            document.querySelectorAll('.emoji-marker-outer').forEach(m => m.style.display = '');
+            document.getElementById('active-iphone-simulator').querySelectorAll('.social-marker').forEach(m => m.style.display = 'none');
+            document.getElementById('active-iphone-simulator').querySelectorAll('.emoji-marker-outer').forEach(m => m.style.display = '');
         }
         
         // Leverage existing goBack logic which restores panels natively when hitting home
@@ -423,7 +461,7 @@ const app = {
         document.getElementById('share-hub-menu').classList.add('hidden');
         document.getElementById('recording-ui').classList.remove('hidden');
         // If they want to record the view, restore the original emojis and flight path
-        document.querySelectorAll('.emoji-marker-outer').forEach(m => m.style.display = '');
+        document.getElementById('active-iphone-simulator').querySelectorAll('.emoji-marker-outer').forEach(m => m.style.display = '');
     },
 
     startRecordingCapture() {
@@ -507,7 +545,7 @@ const app = {
         document.getElementById('share-hub-menu').classList.add('hidden');
         document.getElementById('community-back-btn').classList.remove('hidden');
         // Show heat map layer markers
-        document.querySelectorAll('.social-marker').forEach(m => m.style.display = 'block');
+        document.getElementById('active-iphone-simulator').querySelectorAll('.social-marker').forEach(m => m.style.display = 'block');
     },
 
     closeShareViews() {
@@ -517,8 +555,8 @@ const app = {
         document.getElementById('share-hub-menu').classList.remove('hidden');
         
         // Hide all markers to show clean globe again
-        document.querySelectorAll('.emoji-marker-outer').forEach(m => m.style.display = 'none');
-        document.querySelectorAll('.social-marker').forEach(m => m.style.display = 'none');
+        document.getElementById('active-iphone-simulator').querySelectorAll('.emoji-marker-outer').forEach(m => m.style.display = 'none');
+        document.getElementById('active-iphone-simulator').querySelectorAll('.social-marker').forEach(m => m.style.display = 'none');
     },
 
     /**
@@ -928,11 +966,11 @@ const app = {
         this.navigateTo(screenId);
         if (screenId === 'home-screen') {
             // Restore hidden panels
-            const bookingCard = document.querySelector('.booking-card');
-            const heroSection = document.querySelector('.hero-section');
+            const bookingCard = document.getElementById('active-iphone-simulator').querySelector('.booking-card');
+            const heroSection = document.getElementById('active-iphone-simulator').querySelector('.hero-section');
             const appHeader = document.querySelector('#home-screen .app-header');
-            const aiWrapper = document.querySelector('.ai-command-wrapper');
-            const aiPanel = document.querySelector('.ai-command-panel');
+            const aiWrapper = document.getElementById('active-iphone-simulator').querySelector('.ai-command-wrapper');
+            const aiPanel = document.getElementById('active-iphone-simulator').querySelector('.ai-command-panel');
             if (bookingCard) bookingCard.style.display = 'none'; // headless DOM proxy
             if (heroSection) heroSection.style.display = '';
             if (appHeader) appHeader.style.display = '';
@@ -945,8 +983,8 @@ const app = {
 
             if (this.map) {
                 // Restore normal map markers if returning from share
-                document.querySelectorAll('.social-marker').forEach(m => m.style.display = 'none');
-                document.querySelectorAll('.emoji-marker-outer').forEach(m => m.style.display = '');
+                document.getElementById('active-iphone-simulator').querySelectorAll('.social-marker').forEach(m => m.style.display = 'none');
+                document.getElementById('active-iphone-simulator').querySelectorAll('.emoji-marker-outer').forEach(m => m.style.display = '');
 
                 // Remove route layers & cancel animation
                 if (this._routeAnimId) { cancelAnimationFrame(this._routeAnimId); this._routeAnimId = null; }
@@ -961,12 +999,18 @@ const app = {
                 });
 
                 // Restore all emoji markers
-                document.querySelectorAll('.emoji-marker-outer').forEach(m => m.style.display = '');
+                document.getElementById('active-iphone-simulator').querySelectorAll('.emoji-marker-outer').forEach(m => m.style.display = '');
                 this._activeEmoji = null;
 
                 // Hide ratings header
                 const ratingsHeader = document.getElementById('ratings-header');
                 if (ratingsHeader) ratingsHeader.classList.add('hidden');
+
+                // Reset delivery plan panel
+                this._resetDeliveryPanel();
+
+                // Reset rate marketplace panel
+                this._resetRateMarketplace();
 
                 // Restart ambient marker animations
                 this._startAmbientAnimations();
@@ -1118,14 +1162,14 @@ const app = {
         if (!this.trendingFeatures || this.trendingFeatures.length === 0) return;
 
         // Hide main UI elements
-        const hero = document.querySelector('.hero-section');
+        const hero = document.getElementById('active-iphone-simulator').querySelector('.hero-section');
         if (hero && !hero.classList.contains('faded')) hero.classList.add('faded');
         
         let card = document.getElementById('booking-card');
         if (card && !card.classList.contains('collapsed')) card.classList.add('collapsed');
 
         // Hide AI search component to prevent overlap with the pickup sheet
-        const aiWrapper = document.querySelector('.ai-command-wrapper');
+        const aiWrapper = document.getElementById('active-iphone-simulator').querySelector('.ai-command-wrapper');
         if (aiWrapper) aiWrapper.style.display = 'none';
 
         // Configure the Pickup Sheet for aggregation
@@ -1189,8 +1233,9 @@ const app = {
         const origin = document.getElementById('origin').value.trim();
         const dest = document.getElementById('destination').value.trim();
         const warnTag = document.getElementById('dist-warn');
-        const cargoSelect = document.querySelector('.item-select select');
-        const btn = document.querySelector('.booking-card .primary-btn');
+        const cargoSelect = document.getElementById('cargo-select') || document.querySelector('.item-select select');
+        const dateInput = document.getElementById('delivery-date');
+        const btn = document.getElementById('active-iphone-simulator').querySelector('.booking-card .primary-btn');
 
         let restaurantName = origin;
         let foodItem = "Premium Package";
@@ -1221,9 +1266,12 @@ const app = {
         btn.disabled = true;
         warnTag.style.display = 'none';
 
+        const dateVal = dateInput && dateInput.value ? dateInput.value : '';
+        const dateParam = dateVal ? `&date=${encodeURIComponent(dateVal)}` : '';
+
         try {
             const resp = await fetch(
-                `/api/route?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}&cargo=${cargoType}`
+                `/api/route?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}&cargo=${cargoType}${dateParam}`
             );
             const data = await resp.json();
 
@@ -1250,8 +1298,14 @@ const app = {
                     this._activeOriginCoords = oCoords;
                     this._activeDestCoords = dCoords;
                     
-                    // Generate great-circle arc points for smooth globe path
-                    const arcPoints = this._greatCircleArc(oCoords, dCoords, 120);
+                    // Chain great-circle arc points for multi-leg journey (Restaurant -> Origin Airport -> Dest Airport -> Destination)
+                    const origAirCoords = data.route?.origin?.lon ? [data.route.origin.lon, data.route.origin.lat] : oCoords;
+                    const destAirCoords = data.route?.destination?.lon ? [data.route.destination.lon, data.route.destination.lat] : dCoords;
+
+                    const arc1 = this._greatCircleArc(oCoords, origAirCoords, 20);
+                    const arc2 = this._greatCircleArc(origAirCoords, destAirCoords, 80);
+                    const arc3 = this._greatCircleArc(destAirCoords, dCoords, 20);
+                    const arcPoints = [...arc1, ...arc2, ...arc3];
 
                     const fullRouteGeoJSON = {
                         'type': 'Feature',
@@ -1383,10 +1437,10 @@ const app = {
                     setTimeout(() => { this._routeAnimId = requestAnimationFrame(animateRoute); }, 1500);
                     
                     // Hide the booking card and hero so the globe route is fully visible
-                    const bookingCard = document.querySelector('.booking-card');
-                    const heroSection = document.querySelector('.hero-section');
+                    const bookingCard = document.getElementById('active-iphone-simulator').querySelector('.booking-card');
+                    const heroSection = document.getElementById('active-iphone-simulator').querySelector('.hero-section');
                     const appHeader = document.querySelector('#home-screen .app-header');
-                    const aiPanel = document.querySelector('.ai-command-panel');
+                    const aiPanel = document.getElementById('active-iphone-simulator').querySelector('.ai-command-panel');
                     if (bookingCard) bookingCard.style.display = 'none';
                     if (heroSection) heroSection.style.display = 'none';
                     if (appHeader) appHeader.style.display = 'none';
@@ -1405,10 +1459,28 @@ const app = {
                     }
 
                     let dist = data && data.distance_miles ? data.distance_miles : 1000;
-                    let totalHours = (dist / 500) + 1.5;
-                    let hrs = Math.floor(totalHours);
-                    let mins = Math.round((totalHours - hrs) * 60);
-                    document.getElementById('pickup-eta').innerHTML = `<ion-icon name="time-outline" style="vertical-align: middle;"></ion-icon> ${hrs}h ${mins}m`;
+                    let etaDisplay = "--:-- --";
+                    
+                    if (data && data.legs && data.legs.length >= 3) {
+                        try {
+                            const flightLeg = data.legs.find(l => l.type === 'flight');
+                            if (flightLeg && flightLeg.flight && flightLeg.flight.arrival_time) {
+                                const arrivalTime = new Date(flightLeg.flight.arrival_time);
+                                const dropoffLeg = data.legs.find(l => l.step === 3) || { duration_minutes: 30 };
+                                const finalEta = new Date(arrivalTime.getTime() + (dropoffLeg.duration_minutes + 15) * 60000);
+                                etaDisplay = finalEta.toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit' });
+                            }
+                        } catch (e) {}
+                    }
+                    
+                    if (etaDisplay === "--:-- --") {
+                        let totalHours = (dist / 500) + 1.5;
+                        let hrs = Math.floor(totalHours);
+                        let mins = Math.round((totalHours - hrs) * 60);
+                        etaDisplay = `${hrs}h ${mins}m`;
+                    }
+                    
+                    document.getElementById('pickup-eta').innerHTML = `<ion-icon name="time-outline" style="vertical-align: middle;"></ion-icon> <span style="color: var(--accent-color); font-weight: 600;">${etaDisplay}</span>`;
                     
                     if (data && data.total_cost) {
                         document.getElementById('pickup-cost').textContent = "$" + Math.floor(data.total_cost).toLocaleString();
@@ -1423,9 +1495,9 @@ const app = {
 
                     // Show ratings header panel
                     if (ratings) {
-                        document.getElementById('rh-yelp').innerHTML = '<ion-icon name="star"></ion-icon> ' + ratings.yelp + ' Yelp';
-                        document.getElementById('rh-uber').innerHTML = '<ion-icon name="star"></ion-icon> ' + ratings.uberEats + ' Eats';
-                        document.getElementById('rh-reddit').innerHTML = '<ion-icon name="flame"></ion-icon> ' + ratings.reddit + ' Reddit';
+                        document.getElementById('rh-yelp').innerHTML = `<img src="Yelp_Logo.svg.png" style="height: 18px; vertical-align: middle; margin-right: 6px; border-radius: 4px; background: rgba(255,255,255,0.95); padding: 2px;"> ` + ratings.yelp;
+                        document.getElementById('rh-uber').innerHTML = `<img src="uber eats.jpeg" style="height: 18px; vertical-align: middle; margin-right: 6px; border-radius: 4px; background: rgba(255,255,255,0.95); padding: 2px;"> ` + ratings.uberEats;
+                        document.getElementById('rh-reddit').innerHTML = `<img src="reddit.png" style="height: 18px; vertical-align: middle; margin-right: 6px; border-radius: 4px; background: rgba(255,255,255,0.95); padding: 2px;"> ` + ratings.reddit;
                         const ratingsHeader = document.getElementById('ratings-header');
                         if (ratingsHeader) ratingsHeader.classList.remove('hidden');
                     }
@@ -1436,6 +1508,32 @@ const app = {
                             app.triggerHitchhikeModal();
                         }
                     }, 4500);
+
+                    // Populate the delivery plan panel
+                    this._populateDeliveryPanel({
+                        origin: origin,
+                        destination: dest,
+                        restaurant: restaurantName,
+                        foodItem: foodItem,
+                        emoji: emoji,
+                        cargoType: cargoType,
+                        distance: data && data.distance_miles ? data.distance_miles : dist,
+                        totalCost: data && data.total_cost ? data.total_cost : (dist * (cargoType === 'secure' ? 4.00 : 2.50)),
+                        legs: data && data.legs ? data.legs : null,
+                        flightData: data && data.flight ? data.flight : null,
+                        oCoords: oCoords,
+                        dCoords: dCoords
+                    });
+
+                    // Populate the rate marketplace panel
+                    this._populateRateMarketplace({
+                        origin: origin,
+                        destination: dest,
+                        distance: data && data.distance_miles ? data.distance_miles : dist,
+                        legs: data && data.legs ? data.legs : null,
+                        flightData: data && data.flights ? data.flights : null,
+                        cargoType: cargoType
+                    });
                     
                     this.map.flyTo({
                         center: [
@@ -1915,12 +2013,634 @@ const app = {
             toast.style.transition = 'all 0.3s ease';
             setTimeout(() => toast.remove(), 300);
         }, 4000);
+    },
+
+    /**
+     * Populates the Delivery Plan Panel with full logistics data
+     */
+    _populateDeliveryPanel(planData) {
+        const panel = document.getElementById('delivery-plan-panel');
+        const awaiting = document.getElementById('dpp-awaiting');
+        const active = document.getElementById('dpp-active-plan');
+        const badge = document.getElementById('dpp-status-badge');
+        const routeLabel = document.getElementById('dpp-route-label');
+        const timeline = document.getElementById('dpp-timeline');
+        const costSummary = document.getElementById('dpp-cost-summary');
+        const dispatchBtn = document.getElementById('dpp-dispatch-btn');
+
+        if (!panel) return;
+
+        // Transition panel to active state
+        panel.classList.remove('awaiting');
+        panel.classList.add('active');
+        awaiting.style.display = 'none';
+        active.style.display = 'block';
+        dispatchBtn.disabled = false;
+
+        // Parse city names from full addresses
+        const originCity = (planData.origin || '').split(',').slice(-2).join(',').trim() || planData.origin;
+        const destCity = (planData.destination || '').split(',').slice(-2).join(',').trim() || planData.destination;
+
+        // Header
+        badge.innerHTML = '<span class="pulse-dot"></span> Plan Ready';
+        routeLabel.innerHTML = `<span>${originCity}</span> <span class="arrow">&#8594;</span> <span>${destCity}</span>`;
+
+        // Stats
+        const now = new Date();
+        const dist = Math.round(planData.distance || 0);
+        const totalHours = (dist / 500) + 1.5;
+        const hrs = Math.floor(totalHours);
+        const mins = Math.round((totalHours - hrs) * 60);
+
+        let etaStr = "--";
+
+        if (planData.flightData && planData.flightData.length > 0 && planData.legs && planData.legs.length >= 3) {
+            const bestFlight = planData.flightData.reduce((a, b) => a.price < b.price ? a : b);
+            // Ensure arrival_time uses proper ISO
+            const arrivalTime = new Date(bestFlight.arrival_time);
+            
+            // Dropoff drive time from the third leg
+            const dropoffLeg = planData.legs.find(l => l.step === 3) || { duration_minutes: 30 };
+            
+            // Exact ETA = Land Time + Dropoff Uber + 15 min buffer (retrieving cargo)
+            const finalEta = new Date(arrivalTime.getTime() + (dropoffLeg.duration_minutes + 15) * 60000);
+            etaStr = finalEta.toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit' });
+            
+        } else {
+            // Fallback generic estimate
+            const finalEta = new Date(now.getTime() + (hrs * 60 + mins) * 60000);
+            etaStr = finalEta.toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit' });
+        }
+
+        document.getElementById('dpp-stat-eta').textContent = etaStr;
+
+        // Build timeline steps
+        let timelineHTML = '';
+        let legCount = 0;
+
+        // Cost tracking
+        let pickupCost = 0;
+        let flightCost = 0;
+        let lastMileCost = 0;
+        let conciergeCost = 0;
+
+        // Trace timestamps globally
+        let bestFlightTakeoff = null;
+        let bestFlightLand = null;
+        const flightLeg = planData.legs ? planData.legs.find(l => l.type === 'flight') : null;
+        if (flightLeg && flightLeg.flight) {
+            bestFlightTakeoff = new Date(flightLeg.flight.departure_time);
+            bestFlightLand = new Date(flightLeg.flight.arrival_time);
+        }
+
+        if (planData.legs && planData.legs.length > 0) {
+            // Calculate Prep Step BEFORE iterating legs
+            let prepEndStr = "ASAP";
+            let prepStartStr = "ASAP";
+            if (bestFlightTakeoff) {
+                const firstLeg = planData.legs.find(l => l.step === 1) || { duration_minutes: 30 };
+                const endT = new Date(bestFlightTakeoff.getTime() - 60 * 60000); // Airport arrival
+                const startT = new Date(endT.getTime() - (firstLeg.duration_minutes || 30) * 60000); // Uber pickup
+                const prepStartT = new Date(startT.getTime() - 30 * 60000);
+                prepEndStr = startT.toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit' });
+                prepStartStr = prepStartT.toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit' });
+            }
+
+            timelineHTML += `
+                <div class="dpp-step" onclick="this.classList.toggle('expanded')" style="cursor: pointer;">
+                    <div class="dpp-step-icon pickup"><ion-icon name="restaurant-outline"></ion-icon></div>
+                    <div class="dpp-step-body">
+                        <h4>Food Procurement <ion-icon name="chevron-down-outline" style="font-size: 10px; opacity: 0.5;"></ion-icon></h4>
+                        <p>${planData.restaurant || 'Restaurant'} - ${planData.foodItem || 'Package'}</p>
+                        <div class="dpp-step-meta">
+                            <span class="dpp-meta-chip">${planData.cargoType === 'heated' ? 'Heated Case' : planData.cargoType === 'refrigerated' ? 'Cryo Case' : 'Secure Vault'}</span>
+                            <span class="dpp-meta-chip time">~30min prep</span>
+                        </div>
+                        <div class="dpp-step-expanded">
+                            <div style="display: flex; justify-content: space-between;">
+                                <span style="color: white; font-weight: 500;">Order: ${prepStartStr}</span>
+                                <span>Ready: ${prepEndStr}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            legCount++;
+
+            // Dynamically build from API response
+            planData.legs.forEach((leg, i) => {
+                legCount++;
+                let iconClass = 'rideshare';
+                let iconName = 'car-sport';
+                let timeStr = '';
+                
+                let stepStart = "";
+                let stepEnd = "";
+
+                if (leg.type === 'flight') {
+                    iconClass = 'flight';
+                    iconName = 'airplane';
+                    flightCost = leg.cost || 0;
+                    const flightTime = Math.round(dist / 500 * 60);
+                    timeStr = Math.floor(flightTime / 60) + 'h ' + (flightTime % 60) + 'm';
+                    
+                    if (bestFlightTakeoff && bestFlightLand) {
+                        stepStart = "Takeoff: " + bestFlightTakeoff.toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit' });
+                        stepEnd = "Land: " + bestFlightLand.toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit' });
+                    }
+                } else if (leg.type === 'rideshare') {
+                    if (leg.label && leg.label.toLowerCase().includes('lyft')) {
+                        iconClass = 'lyft';
+                        iconName = 'car';
+                        lastMileCost = leg.cost || 0;
+                        if (bestFlightLand) {
+                            const startT = new Date(bestFlightLand.getTime() + 15 * 60000);
+                            const endT = new Date(startT.getTime() + (leg.duration_minutes || 30) * 60000);
+                            stepStart = "Pickup: " + startT.toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit' });
+                            stepEnd = "Dropoff: " + endT.toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit' });
+                        }
+                    } else {
+                        iconClass = 'rideshare';
+                        iconName = 'car-sport';
+                        pickupCost = leg.cost || 0;
+                        if (bestFlightTakeoff) {
+                            const endT = new Date(bestFlightTakeoff.getTime() - 60 * 60000); // arrive at airport 1h early
+                            const startT = new Date(endT.getTime() - (leg.duration_minutes || 30) * 60000);
+                            stepStart = "Pickup: " + startT.toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit' });
+                            stepEnd = "Terminal: " + endT.toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit' });
+                        }
+                    }
+                    timeStr = '~' + (leg.duration_minutes || Math.round(15 + Math.random() * 30)) + 'min';
+                } else if (leg.type === 'concierge') {
+                    iconClass = 'concierge';
+                    iconName = 'briefcase';
+                    conciergeCost = leg.cost || 0;
+                    if (bestFlightLand) {
+                        const dropoffLeg = planData.legs.find(l => l.step === 3) || { duration_minutes: 30 };
+                        const startT = new Date(bestFlightLand.getTime() + (15 + dropoffLeg.duration_minutes) * 60000);
+                        stepStart = "Handoff: " + startT.toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit' });
+                        stepEnd = "Complete";
+                    }
+                }
+
+                timelineHTML += `
+                    <div class="dpp-step" onclick="this.classList.toggle('expanded')" style="cursor: pointer;">
+                        <div class="dpp-step-icon ${iconClass}"><ion-icon name="${iconName}"></ion-icon></div>
+                        <div class="dpp-step-body">
+                            <h4>${leg.label || 'Transport Leg'} <ion-icon name="chevron-down-outline" style="font-size: 10px; opacity: 0.5;"></ion-icon></h4>
+                            <p>${leg.flight ? (leg.flight.origin + ' to ' + leg.flight.destination) : (leg.includes ? leg.includes.join(' + ') : '')}</p>
+                            <div class="dpp-step-meta">
+                                <span class="dpp-meta-chip cost">$${(leg.cost || 0).toFixed(0)}</span>
+                                ${timeStr ? '<span class="dpp-meta-chip time">' + timeStr + '</span>' : ''}
+                            </div>
+                            <div class="dpp-step-expanded">
+                                <div style="display: flex; justify-content: space-between;">
+                                    <span style="color: white; font-weight: 500;">${stepStart || 'ASAP'}</span>
+                                    <span>${stepEnd || 'TBD'}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+            });
+        } else {
+            // Fallback: generate estimated plan
+            pickupCost = 85 + Math.round(Math.random() * 60);
+            flightCost = 380 + Math.round(dist * 0.15);
+            lastMileCost = 55 + Math.round(Math.random() * 40);
+            conciergeCost = 250 + Math.round(dist * 0.1);
+            const flightMinutes = Math.round(dist / 500 * 60);
+
+            let fallbackCur = new Date();
+
+            // Step 1: Pickup
+            let f1Start = fallbackCur.toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit' });
+            fallbackCur = new Date(fallbackCur.getTime() + 30 * 60000);
+            let f1End = fallbackCur.toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit' });
+
+            timelineHTML += `
+                <div class="dpp-step" onclick="this.classList.toggle('expanded')" style="cursor: pointer;">
+                    <div class="dpp-step-icon pickup"><ion-icon name="restaurant-outline"></ion-icon></div>
+                    <div class="dpp-step-body">
+                        <h4>Food Procurement <ion-icon name="chevron-down-outline" style="font-size: 10px; opacity: 0.5;"></ion-icon></h4>
+                        <p>${planData.restaurant || 'Restaurant'} - ${planData.foodItem || 'Package'}</p>
+                        <div class="dpp-step-meta">
+                            <span class="dpp-meta-chip">${planData.cargoType === 'heated' ? 'Heated Case' : planData.cargoType === 'refrigerated' ? 'Cryo Case' : 'Secure Vault'}</span>
+                            <span class="dpp-meta-chip time">~30min prep</span>
+                        </div>
+                        <div class="dpp-step-expanded">
+                            <div>
+                                <span style="color: white; font-weight: 500;">Order: ${f1Start}</span>
+                                <span>Ready: ${f1End}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            legCount++;
+
+            // Step 2: Ground to airport
+            let f2Start = fallbackCur.toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit' });
+            fallbackCur = new Date(fallbackCur.getTime() + 35 * 60000);
+            let f2End = fallbackCur.toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit' });
+
+            timelineHTML += `
+                <div class="dpp-step" onclick="this.classList.toggle('expanded')" style="cursor: pointer;">
+                    <div class="dpp-step-icon rideshare"><ion-icon name="car-sport"></ion-icon></div>
+                    <div class="dpp-step-body">
+                        <h4>Uber Black SUV <ion-icon name="chevron-down-outline" style="font-size: 10px; opacity: 0.5;"></ion-icon></h4>
+                        <p>Transit to departing airport</p>
+                        <div class="dpp-step-meta">
+                            <span class="dpp-meta-chip cost">$${pickupCost}</span>
+                            <span class="dpp-meta-chip time">~35min</span>
+                        </div>
+                        <div class="dpp-step-expanded">
+                            <div>
+                                <span style="color: white; font-weight: 500;">Pickup: ${f2Start}</span>
+                                <span>Terminal: ${f2End}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            legCount++;
+
+            // Step 3: Flight
+            fallbackCur = new Date(fallbackCur.getTime() + 45 * 60000); // 45min terminal wait
+            let f3Start = fallbackCur.toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit' });
+            fallbackCur = new Date(fallbackCur.getTime() + flightMinutes * 60000);
+            let f3End = fallbackCur.toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit' });
+
+            timelineHTML += `
+                <div class="dpp-step" onclick="this.classList.toggle('expanded')" style="cursor: pointer;">
+                    <div class="dpp-step-icon flight"><ion-icon name="airplane"></ion-icon></div>
+                    <div class="dpp-step-body">
+                        <h4>Premium Priority Cargo <ion-icon name="chevron-down-outline" style="font-size: 10px; opacity: 0.5;"></ion-icon></h4>
+                        <p>American Airlines - First Class Environment</p>
+                        <div class="dpp-step-meta">
+                            <span class="dpp-meta-chip cost">$${flightCost}</span>
+                            <span class="dpp-meta-chip time">${Math.floor(flightMinutes / 60)}h ${flightMinutes % 60}m</span>
+                        </div>
+                        <div class="dpp-step-expanded">
+                            <div>
+                                <span style="color: white; font-weight: 500;">Takeoff: ${f3Start}</span>
+                                <span>Land: ${f3End}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            legCount++;
+
+            // Step 4: Dropoff
+            fallbackCur = new Date(fallbackCur.getTime() + 15 * 60000); // retrieve package
+            let f4Start = fallbackCur.toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit' });
+            fallbackCur = new Date(fallbackCur.getTime() + 40 * 60000);
+            let f4End = fallbackCur.toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit' });
+
+            timelineHTML += `
+                <div class="dpp-step" onclick="this.classList.toggle('expanded')" style="cursor: pointer;">
+                    <div class="dpp-step-icon lyft"><ion-icon name="car"></ion-icon></div>
+                    <div class="dpp-step-body">
+                        <h4>Lyft Lux Last-Mile <ion-icon name="chevron-down-outline" style="font-size: 10px; opacity: 0.5;"></ion-icon></h4>
+                        <p>Airport terminal direct to delivery point</p>
+                        <div class="dpp-step-meta">
+                            <span class="dpp-meta-chip cost">$${lastMileCost}</span>
+                            <span class="dpp-meta-chip time">~40min</span>
+                        </div>
+                        <div class="dpp-step-expanded">
+                            <div>
+                                <span style="color: white; font-weight: 500;">Pickup: ${f4Start}</span>
+                                <span>Dropoff: ${f4End}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            legCount++;
+
+            // Step 5: Concierge
+            timelineHTML += `
+                <div class="dpp-step" onclick="this.classList.toggle('expanded')" style="cursor: pointer;">
+                    <div class="dpp-step-icon concierge"><ion-icon name="briefcase"></ion-icon></div>
+                    <div class="dpp-step-body">
+                        <h4>Concierge Handling Fee <ion-icon name="chevron-down-outline" style="font-size: 10px; opacity: 0.5;"></ion-icon></h4>
+                        <p>Temperature-controlled transit + dedicated agent</p>
+                        <div class="dpp-step-meta">
+                            <span class="dpp-meta-chip cost">$${conciergeCost}</span>
+                        </div>
+                        <div class="dpp-step-expanded">
+                            <div>
+                                <span style="color: white; font-weight: 500;">Handoff: ${f4End}</span>
+                                <span>Complete</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            legCount++;
+
+            // Step 6: Delivery
+            timelineHTML += `
+                <div class="dpp-step">
+                    <div class="dpp-step-icon dropoff"><ion-icon name="checkmark-circle"></ion-icon></div>
+                    <div class="dpp-step-body">
+                        <h4>Doorstep Delivery</h4>
+                        <p>${destCity}</p>
+                        <div class="dpp-step-meta">
+                            <span class="dpp-meta-chip time">ETA: ${hrs}h ${mins}m total</span>
+                        </div>
+                    </div>
+                </div>`;
+            legCount++;
+        }
+
+        timeline.innerHTML = timelineHTML;
+
+        // Default pricing fallbacks for the cost table when legs are missing
+        const unitedPrice = flightCost > 0 ? flightCost : Math.round(380 + dist * 0.15);
+        const uberBlack = pickupCost > 0 ? pickupCost : Math.round(85 + Math.random() * 60);
+        const lyftLux = lastMileCost > 0 ? lastMileCost : Math.round(55 + Math.random() * 40);
+
+
+        // Cost breakdown
+        const computedTotal = pickupCost + flightCost + lastMileCost + conciergeCost;
+        const totalCost = computedTotal > 0 ? computedTotal : (planData.totalCost || 1000);
+        const insuranceFee = Math.round(totalCost * 0.035);
+        const platformFee = Math.round(totalCost * 0.05);
+        const grandTotal = Math.round(totalCost + insuranceFee + platformFee);
+
+        costSummary.innerHTML = `
+            <div style="font-size: 10px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; font-weight: 600;">Fee Breakdown</div>
+            <div style="display: flex; justify-content: space-between; font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 4px;">
+                <span>Ground Transport (Orig & Dest)</span>
+                <span>$${((pickupCost || uberBlack) + (lastMileCost || lyftLux)).toLocaleString()}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 4px;">
+                <span>Premium Flight Cargo</span>
+                <span>$${(flightCost || unitedPrice).toLocaleString()}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 4px;">
+                <span>Concierge & Handling</span>
+                <span>$${(conciergeCost || 400).toLocaleString()}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 11px; color: rgba(255,255,255,0.4); margin-bottom: 4px; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.05);">
+                <span>Est. Taxes & Platform Fees</span>
+                <span>$${(insuranceFee + platformFee).toLocaleString()}</span>
+            </div>`;
+
+        document.getElementById('dpp-total-cost').textContent = '$' + grandTotal.toLocaleString();
+
+        // Scroll content to top
+        document.getElementById('dpp-content').scrollTop = 0;
+
+        console.log('[JetSlice] Delivery Plan Panel populated:', planData.origin, '->', planData.destination);
+    },
+
+    /**
+     * Resets the Delivery Plan Panel to its awaiting state
+     */
+    _resetDeliveryPanel() {
+        const panel = document.getElementById('delivery-plan-panel');
+        const awaiting = document.getElementById('dpp-awaiting');
+        const active = document.getElementById('dpp-active-plan');
+        const badge = document.getElementById('dpp-status-badge');
+        const routeLabel = document.getElementById('dpp-route-label');
+        const dispatchBtn = document.getElementById('dpp-dispatch-btn');
+
+        if (!panel) return;
+
+        panel.classList.add('awaiting');
+        panel.classList.remove('active');
+        if (awaiting) awaiting.style.display = '';
+        if (active) active.style.display = 'none';
+        if (badge) badge.innerHTML = '<span class="pulse-dot"></span> Awaiting Route';
+        if (routeLabel) routeLabel.innerHTML = '<span>Select a route to generate plan</span>';
+        if (dispatchBtn) dispatchBtn.disabled = true;
+    },
+
+    /**
+     * Switches the active tab in the Rate Marketplace panel
+     */
+    switchRateTab(tabName) {
+        document.querySelectorAll('.rmp-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.rmp-tab-content').forEach(c => c.classList.remove('active'));
+        const tab = document.querySelector(`.rmp-tab[data-tab="${tabName}"]`);
+        const content = document.getElementById(`rmp-${tabName}-tab`);
+        if (tab) tab.classList.add('active');
+        if (content) content.classList.add('active');
+    },
+
+    /**
+     * Populates the Rate Marketplace panel with flight and ride options
+     */
+    _populateRateMarketplace(routeData) {
+        const panel = document.getElementById('rate-marketplace-panel');
+        const awaiting = document.getElementById('rmp-awaiting');
+        const active = document.getElementById('rmp-active');
+        const badge = document.getElementById('rmp-status-badge');
+        const routeLabel = document.getElementById('rmp-route-label');
+        const flightList = document.getElementById('rmp-flight-list');
+        const pickupRides = document.getElementById('rmp-pickup-rides');
+        const deliveryRides = document.getElementById('rmp-delivery-rides');
+        const bookBtn = document.getElementById('rmp-book-btn');
+        const savingsText = document.getElementById('rmp-savings-text');
+
+        if (!panel) return;
+
+        panel.classList.remove('awaiting');
+        panel.classList.add('active');
+        awaiting.style.display = 'none';
+        active.style.display = 'block';
+        bookBtn.disabled = false;
+
+        // Parse airport codes from origin/dest
+        const airportMap = {
+            'new york': 'JFK', 'manhattan': 'JFK', 'brooklyn': 'JFK',
+            'los angeles': 'LAX', 'hollywood': 'LAX', 'beverly hills': 'LAX',
+            'chicago': 'ORD', 'san francisco': 'SFO', 'miami': 'MIA',
+            'dallas': 'DFW', 'austin': 'AUS', 'houston': 'IAH',
+            'seattle': 'SEA', 'portland': 'PDX', 'boston': 'BOS',
+            'atlanta': 'ATL', 'denver': 'DEN', 'phoenix': 'PHX',
+            'new orleans': 'MSY', 'memphis': 'MEM', 'nashville': 'BNA',
+            'philadelphia': 'PHL', 'detroit': 'DTW', 'minneapolis': 'MSP'
+        };
+        const getAirport = (loc) => {
+            const lc = (loc || '').toLowerCase();
+            for (const [city, code] of Object.entries(airportMap)) {
+                if (lc.includes(city)) return code;
+            }
+            return lc.substring(0, 3).toUpperCase();
+        };
+        const originCode = getAirport(routeData.origin);
+        const destCode = getAirport(routeData.destination);
+        const dist = Math.round(routeData.distance || 1000);
+        const flightMins = Math.round(dist / 500 * 60);
+        const flightHrs = Math.floor(flightMins / 60);
+        const flightRemMins = flightMins % 60;
+
+        // Header
+        badge.innerHTML = '<span class="pulse-dot"></span> ' + 8 + ' Providers';
+        routeLabel.innerHTML = `<span>${originCode}</span> <span class="arrow">&#8594;</span> <span>${destCode}</span> <span style="margin-left:auto;font-size:11px;color:var(--text-secondary)">${dist.toLocaleString()} mi</span>`;
+
+        // Reset tabs to flights
+        this.switchRateTab('flights');
+
+        // Generate flight options
+        let flights = [];
+        
+        if (routeData.flightData && routeData.flightData.length > 0) {
+            // Live SerpApi data or formatted Mock data from backend
+            flights = routeData.flightData;
+        } else {
+            // Unconnected Math Fallback
+            const basePrice = 280 + Math.round(dist * 0.12);
+            const timeOffset = Math.floor(Math.random() * 4);
+            flights = [
+                { airline: 'Google Flights', code: 'GF', color: '#4285F4', price: Math.round(basePrice * 0.88), stops: 0, dept: `${6 + timeOffset}:15 AM`, cabin: 'Economy', source: 'Google', flightNum: 'Aggregated' },
+                { airline: 'United Airlines', code: 'UA', color: '#005DAA', price: Math.round(basePrice * 1.05), stops: 0, dept: `${7 + timeOffset}:30 AM`, cabin: 'First Class Cargo', source: 'Amadeus API', flightNum: 'UA ' + (1200 + Math.floor(Math.random() * 800)) },
+                { airline: 'Southwest Airlines', code: 'WN', color: '#E24726', price: Math.round(basePrice * 0.78), stops: 1, dept: `${6 + timeOffset}:45 AM`, cabin: 'Wanna Get Away', source: 'SerpAPI', flightNum: 'WN ' + (3000 + Math.floor(Math.random() * 500)) },
+                { airline: 'JetBlue Airways', code: 'B6', color: '#0033A0', price: Math.round(basePrice * 0.85), stops: 0, dept: `${8 + timeOffset}:00 AM`, cabin: 'Blue Extra', source: 'SerpAPI', flightNum: 'B6 ' + (600 + Math.floor(Math.random() * 300)) },
+                { airline: 'Delta Air Lines', code: 'DL', color: '#003A70', price: Math.round(basePrice * 1.12), stops: 0, dept: `${9 + timeOffset}:10 AM`, cabin: 'Delta One Cargo', source: 'SerpAPI', flightNum: 'DL ' + (400 + Math.floor(Math.random() * 600)) },
+                { airline: 'American Airlines', code: 'AA', color: '#B61F23', price: Math.round(basePrice * 1.02), stops: 1, dept: `${7 + timeOffset}:55 AM`, cabin: 'Business Cargo', source: 'SerpAPI', flightNum: 'AA ' + (700 + Math.floor(Math.random() * 500)) },
+                { airline: 'Spirit Airlines', code: 'NK', color: '#FFD200', price: Math.round(basePrice * 0.55), stops: 2, dept: `${5 + timeOffset}:30 AM`, cabin: 'Bare Fare + Cargo', source: 'Scraped', flightNum: 'NK ' + (100 + Math.floor(Math.random() * 400)) },
+                { airline: 'Frontier Airlines', code: 'F9', color: '#004225', price: Math.round(basePrice * 0.60), stops: 1, dept: `${6 + timeOffset}:00 AM`, cabin: 'Economy + Add-on', source: 'Scraped', flightNum: 'F9 ' + (500 + Math.floor(Math.random() * 300)) }
+            ];
+        }
+
+        // Mark best deal
+        const cheapest = flights.reduce((a, b) => a.price < b.price ? a : b);
+        const mostExpensive = flights.reduce((a, b) => a.price > b.price ? a : b);
+
+        let flightHTML = '';
+        flights.forEach(f => {
+            const isBest = f === cheapest;
+            const totalDur = flightMins + (f.stops * 45);
+            const dh = Math.floor(totalDur / 60);
+            const dm = totalDur % 60;
+            const stopsText = f.stops === 0 ? 'Nonstop' : (f.stops === 1 ? '1 Stop' : f.stops + ' Stops');
+            const stopsClass = f.stops === 0 ? 'nonstop' : '';
+
+            flightHTML += `
+                <div class="rmp-flight-card${isBest ? ' best-deal selected' : ''}">
+                    <div class="rmp-fc-top" style="align-items: flex-start; justify-content: space-between;">
+                        <div class="rmp-fc-time" style="display: flex; flex-direction: column;">
+                            <h4 style="margin: 0; font-size: 22px; font-weight: 700; color: white; letter-spacing: -0.5px;">${f.dept}</h4>
+                            <span style="font-size: 12px; color: var(--text-secondary); margin-top: 2px; text-transform: uppercase; letter-spacing: 1px;">Departure</span>
+                        </div>
+                        <div class="rmp-fc-price${isBest ? ' best' : ''}" style="text-align: right;">
+                            <span class="amount">$${f.price}</span>
+                            <span class="per">per seat</span>
+                        </div>
+                    </div>
+                    <div class="rmp-fc-route">
+                        <span class="rmp-fc-code">${originCode}</span>
+                        <div class="rmp-fc-route-line">
+                            <span class="duration">${dh}h ${dm}m</span>
+                            <div class="line"></div>
+                            <span class="stops ${stopsClass}">${stopsText}</span>
+                        </div>
+                        <span class="rmp-fc-code dest">${destCode}</span>
+                    </div>
+                    <div class="rmp-fc-meta">
+                        <span class="rmp-fc-tag" style="border-left: 4px solid ${f.color}; padding-left: 6px;">${f.airline}</span>
+                        <span class="rmp-fc-tag">${f.flightNum} - ${f.cabin}</span>
+                    </div>
+                </div>`;
+        });
+        flightList.innerHTML = flightHTML;
+
+        // Generate ride options
+        const buildRideCard = (name, vehicle, bgColor, icon, baseMin, baseMax, etaMin, etaMax, surge, scheduled) => {
+            const price = baseMin + Math.round(Math.random() * (baseMax - baseMin));
+            const eta = etaMin + Math.round(Math.random() * (etaMax - etaMin));
+            const isBest = !surge && price === baseMin;
+            return { name, vehicle, bgColor, icon, price, eta, surge, scheduled, isBest };
+        };
+
+        const schedTime1 = `Today ${6 + Math.floor(Math.random() * 3)}:${['00','15','30','45'][Math.floor(Math.random()*4)]} AM`;
+        const schedTime2 = `Today ${flightHrs + 8 + Math.floor(Math.random() * 2)}:${['00','15','30','45'][Math.floor(Math.random()*4)]} AM`;
+
+        const pickupOptions = [
+            buildRideCard('Uber Black', 'Premium Sedan', '#000', 'car-sport', 85, 145, 3, 8, false, schedTime1),
+            buildRideCard('UberX', 'Standard Vehicle', '#222', 'car', 35, 65, 2, 6, false, schedTime1),
+            buildRideCard('Uber XL', 'SUV / Minivan', '#333', 'bus', 55, 95, 4, 10, false, schedTime1),
+            buildRideCard('Lyft Lux', 'Premium Vehicle', '#FF00BF', 'car-sport', 80, 140, 3, 9, Math.random() > 0.6, schedTime1),
+            buildRideCard('Lyft Standard', 'Standard Vehicle', '#8A2387', 'car', 30, 58, 2, 7, false, schedTime1),
+            buildRideCard('Lyft XL', 'XL Vehicle', '#6B21A8', 'bus', 50, 88, 5, 12, false, schedTime1),
+            buildRideCard('Yellow Cab', 'Metered Taxi', '#F7C948', 'car', 45, 90, 1, 5, false, schedTime1),
+            buildRideCard('Curb', 'Licensed Taxi', '#1A73E8', 'car', 42, 85, 2, 8, false, schedTime1)
+        ];
+
+        const deliveryOptions = [
+            buildRideCard('Uber Black', 'Premium Sedan', '#000', 'car-sport', 70, 130, 3, 8, Math.random() > 0.7, schedTime2),
+            buildRideCard('UberX', 'Standard Vehicle', '#222', 'car', 28, 55, 2, 6, false, schedTime2),
+            buildRideCard('Uber XL', 'SUV / Minivan', '#333', 'bus', 45, 85, 4, 10, false, schedTime2),
+            buildRideCard('Lyft Lux', 'Premium Vehicle', '#FF00BF', 'car-sport', 65, 125, 3, 9, false, schedTime2),
+            buildRideCard('Lyft Standard', 'Standard Vehicle', '#8A2387', 'car', 25, 50, 2, 7, false, schedTime2),
+            buildRideCard('Lyft XL', 'XL Vehicle', '#6B21A8', 'bus', 40, 78, 5, 12, false, schedTime2),
+            buildRideCard('Yellow Cab', 'Metered Taxi', '#F7C948', 'car', 38, 80, 1, 5, false, schedTime2),
+            buildRideCard('Curb', 'Licensed Taxi', '#1A73E8', 'car', 35, 75, 2, 8, false, schedTime2)
+        ];
+
+        const renderRides = (rides) => {
+            return rides.map(r => {
+                const surgeHTML = r.surge ? '<span class="surge">1.5x</span>' : '';
+                const priceClass = r.isBest ? ' best' : '';
+                const selectedClass = r.name.includes('Black') || r.name.includes('Lux') ? ' selected' : '';
+                return `
+                    <div class="rmp-ride-card${selectedClass}">
+                        <div class="rmp-rc-logo" style="background:${r.bgColor};color:#fff">
+                            <ion-icon name="${r.icon}"></ion-icon>
+                        </div>
+                        <div class="rmp-rc-info">
+                            <h5>${r.name} ${surgeHTML}</h5>
+                            <span class="vehicle">${r.vehicle}</span>
+                            <span class="eta"><ion-icon name="time-outline" style="font-size:11px"></ion-icon> ${r.eta} min away</span>
+                        </div>
+                        <div class="rmp-rc-right">
+                            <span class="price${priceClass}">$${r.price}</span>
+                            <span class="scheduled">${r.scheduled}</span>
+                        </div>
+                    </div>`;
+            }).join('');
+        };
+
+        pickupRides.innerHTML = renderRides(pickupOptions);
+        deliveryRides.innerHTML = renderRides(deliveryOptions);
+
+        // Savings calculation
+        const savings = mostExpensive.price - cheapest.price;
+        savingsText.textContent = `Save up to $${savings} by choosing ${cheapest.airline} over ${mostExpensive.airline}`;
+
+        document.getElementById('rmp-content').scrollTop = 0;
+        console.log('[JetSlice] Rate Marketplace populated:', originCode, '->', destCode);
+    },
+
+    /**
+     * Resets the Rate Marketplace panel to awaiting state
+     */
+    _resetRateMarketplace() {
+        const panel = document.getElementById('rate-marketplace-panel');
+        const awaiting = document.getElementById('rmp-awaiting');
+        const active = document.getElementById('rmp-active');
+        const badge = document.getElementById('rmp-status-badge');
+        const routeLabel = document.getElementById('rmp-route-label');
+        const bookBtn = document.getElementById('rmp-book-btn');
+        const savingsText = document.getElementById('rmp-savings-text');
+
+        if (!panel) return;
+
+        panel.classList.add('awaiting');
+        panel.classList.remove('active');
+        if (awaiting) awaiting.style.display = '';
+        if (active) active.style.display = 'none';
+        if (badge) badge.innerHTML = '<span class="pulse-dot"></span> Scanning';
+        if (routeLabel) routeLabel.innerHTML = '<span>Awaiting route data</span>';
+        if (bookBtn) bookBtn.disabled = true;
+        if (savingsText) savingsText.textContent = 'Select options to compare savings';
     }
 };
 
-// Initialize listeners if needed
-document.addEventListener('DOMContentLoaded', () => {
-    app.initMap();
+function bootJetSlice() {
+    if (window.__MAPBOX_TOKEN !== undefined) {
+        app.initMap();
+    } else {
+        document.addEventListener('JetSliceConfigReady', () => app.initMap());
+    }
 
     // Hide the wing logo on first UI click
     const wing = document.getElementById('jetslice-wing');
@@ -1930,6 +2650,10 @@ document.addEventListener('DOMContentLoaded', () => {
             wing.style.transform = 'translateX(-10px)';
             setTimeout(() => { wing.style.display = 'none'; }, 400);
         };
-        document.querySelector('.app-container').addEventListener('click', hideWing, { once: true });
+        const appCont = document.getElementById('active-iphone-simulator').querySelector('.app-container');
+        if (appCont) appCont.addEventListener('click', hideWing, { once: true });
     }
-});
+}
+
+// Initialize listeners when DOM is ready, but defer Mapbox until API token loads
+document.addEventListener('DOMContentLoaded', bootJetSlice);
