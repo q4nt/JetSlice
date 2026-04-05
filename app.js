@@ -633,7 +633,11 @@ const app = {
     
     async handleCommandInput(event) {
         const query = event.target.value;
-        const popup = document.getElementById('autocomplete-popup');
+        const wrapper = event.target.closest('.ai-command-wrapper');
+        if (!wrapper) return;
+        
+        const popup = wrapper.querySelector('.autocomplete-popup-container');
+        if (!popup) return;
         
         if (!query || query.length < 3) {
             popup.classList.add('hidden');
@@ -646,8 +650,8 @@ const app = {
 
         this._autocompleteTimeout = setTimeout(async () => {
             try {
-                // Mapbox Geocoding - search restaurants/food POIs only
-                const res = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?types=poi&country=us&access_token=${mapboxgl.accessToken}&limit=5`);
+                // Backend Proxy Geocoding - search actual Google Local restaurants
+                const res = await fetch(`/api/autocomplete_restaurants?query=${encodeURIComponent(query)}`);
                 const data = await res.json();
                 
                 if (data.features && data.features.length > 0) {
@@ -655,7 +659,7 @@ const app = {
                     
                     data.features.forEach(feature => {
                         const placeName = feature.text;
-                        const address = feature.place_name ? feature.place_name.split(',').slice(1, 3).join(',').trim() : 'Global Destination';
+                        const address = feature.place_name || 'Global Destination';
                         const isPOI = feature.place_type && feature.place_type.includes('poi');
                         
                         const item = document.createElement('div');
@@ -677,7 +681,7 @@ const app = {
                         `;
                         
                         item.onclick = () => {
-                            document.getElementById('cmdField').value = `${placeName}, ${address}`;
+                            event.target.value = `${placeName}, ${address}`;
                             popup.classList.add('hidden');
                             app.handleSearch({key: 'Enter'}); // Auto-trigger search sequence
                         };
@@ -700,12 +704,28 @@ const app = {
 
                     popup.classList.remove('hidden');
                 } else {
-                    popup.classList.add('hidden');
+                    popup.innerHTML = `
+                        <div style="padding: 12px 16px; display: flex; align-items: center; gap: 12px; cursor: pointer;" onclick="document.getElementById('cmdField').value='${query}'; this.parentElement.classList.add('hidden'); app.handleSearch({key: 'Enter'});">
+                            <ion-icon name="search" style="color: var(--accent-color); font-size: 16px; flex-shrink: 0;"></ion-icon>
+                            <div style="color: var(--text-primary); font-size: 14px; font-weight: 500;">Search for "${query}"</div>
+                        </div>
+                    `;
+                    
+                    const footer = document.createElement('div');
+                    footer.style.padding = '8px 16px';
+                    footer.style.fontSize = '10px';
+                    footer.style.color = 'var(--text-secondary)';
+                    footer.style.textAlign = 'right';
+                    footer.style.textTransform = 'uppercase';
+                    footer.innerHTML = '<ion-icon name="planet" style="margin-right:4px;"></ion-icon> Global Navigation System';
+                    popup.appendChild(footer);
+                    
+                    popup.classList.remove('hidden');
                 }
             } catch (e) {
                 console.error("[Autocomplete Error]", e);
             }
-        }, 300); // 300ms debounce
+        }, 800); // 800ms debounce to conserve external API quotas
     },
 
     openDispatchModal() {

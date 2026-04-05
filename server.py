@@ -27,6 +27,7 @@ from datetime import datetime, timedelta
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import requests
+import urllib.parse
 
 # ---------------------------------------------------------------------------
 # Amadeus SDK (optional - gracefully degrades to mock data)
@@ -724,6 +725,47 @@ else:
     sp = None
     if SPOTIPY_AVAILABLE:
          print("[JetSlice] No Spotify credentials - set SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET")
+
+@app.route('/api/autocomplete_restaurants', methods=['GET'])
+def api_autocomplete_restaurants():
+    query = request.args.get('query', '').strip()
+    if not query:
+        return jsonify({"features": []})
+
+    if not SERPAPI_KEY:
+        print("[JetSlice Autocomplete] No SERPAPI_KEY, falling back to empty features list.")
+        return jsonify({"features": []})
+
+    try:
+        url = f"https://serpapi.com/search.json?engine=google_local&q={urllib.parse.quote(query)}&api_key={SERPAPI_KEY}"
+        import requests 
+        resp = requests.get(url, timeout=5)
+        if resp.status_code == 200:
+            data = resp.json()
+            local_results = data.get("local_results", [])
+            features = []
+            
+            # Map SerpAPI local_results to Mapbox-like 'features' structure for frontend compatibility
+            for i, result in enumerate(local_results[:5]): # Take top 5
+                title = result.get('title', '')
+                addr = result.get('address', '')
+                coords = result.get('gps_coordinates', {})
+                lng = coords.get('longitude', 0)
+                lat = coords.get('latitude', 0)
+                
+                features.append({
+                    "text": title,
+                    "place_name": addr,
+                    "place_type": ["poi", result.get("type", "Restaurant")],
+                    "center": [lng, lat],
+                    "thumbnail": result.get("thumbnail", "")
+                })
+            
+            return jsonify({"features": features})
+    except Exception as e:
+        print(f"[JetSlice Autocomplete] Error querying Google Local via SerpAPI: {e}")
+        
+    return jsonify({"features": []})
 
 @app.route('/api/spotify/current-track', methods=['GET'])
 def get_current_track():

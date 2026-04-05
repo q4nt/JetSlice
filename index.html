@@ -93,6 +93,7 @@
 </div>
 </div>
 <div class="ai-command-wrapper" style="margin: auto 24px 0 24px; position: relative;">
+<div class="autocomplete-popup-container hidden" style="position: absolute; bottom: 100%; left: 0; width: 100%; margin-bottom: 8px; background: var(--panel-glass); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--panel-border); border-radius: 16px; overflow: hidden; box-shadow: 0 -10px 40px rgba(0,0,0,0.5); display: flex; flex-direction: column; z-index: 100; max-height: 300px; overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none;"></div>
 <div class="ai-command-panel" style="background-color: var(--panel-glass); backdrop-filter: blur(16px); padding: 12px 16px; border-radius: 12px; border: 1px solid var(--panel-border); display: flex; align-items: center; justify-content: space-between; flex-wrap: nowrap; box-sizing: border-box; box-shadow: 0 8px 32px rgba(0,0,0,0.6); width: 100%;">
 <ion-icon name="mic-outline" onclick="app.triggerVoiceConcierge()" style="color: var(--accent-color); font-size: 20px; margin-right: 12px; flex-shrink: 0; cursor: pointer;"></ion-icon>
 <input autocomplete="off" oninput="app.handleCommandInput(event)" onkeydown="app.handleSearch(event)" placeholder="Search restaurants, cuisines..." style="background: transparent; border: none; color: var(--text-primary); font-size: 14px; flex: 1 1 auto; min-width: 0; outline: none; caret-color: var(--accent-color); width: 100%;" type="text"/>
@@ -822,6 +823,7 @@
 </div>
 </div>
 <div class="ai-command-wrapper" style="margin: auto 24px 0 24px; position: relative;">
+<div class="autocomplete-popup-container hidden" style="position: absolute; bottom: 100%; left: 0; width: 100%; margin-bottom: 8px; background: var(--panel-glass); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--panel-border); border-radius: 16px; overflow: hidden; box-shadow: 0 -10px 40px rgba(0,0,0,0.5); display: flex; flex-direction: column; z-index: 100; max-height: 300px; overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none;"></div>
 <div class="ai-command-panel" id="ai-command-panel" style="background-color: var(--panel-glass); backdrop-filter: blur(16px); padding: 12px 16px; border-radius: 12px; border: 1px solid var(--panel-border); display: flex; align-items: center; justify-content: space-between; flex-wrap: nowrap; box-sizing: border-box; box-shadow: 0 8px 32px rgba(0,0,0,0.6); width: 100%;">
 <ion-icon name="mic-outline" onclick="app.triggerVoiceConcierge()" style="color: var(--accent-color); font-size: 20px; margin-right: 12px; flex-shrink: 0; cursor: pointer;"></ion-icon>
 <input autocomplete="off" id="cmdField" oninput="app.handleCommandInput(event)" onkeydown="app.handleSearch(event)" placeholder="Search restaurants, cuisines..." style="background: transparent; border: none; color: var(--text-primary); font-size: 14px; flex: 1 1 auto; min-width: 0; outline: none; caret-color: var(--accent-color); width: 100%;" type="text"/>
@@ -852,10 +854,7 @@
 </div>
 </div>
 </div>
-<!-- Autocomplete Drop-up (outside content-scroll to avoid overflow clipping) -->
-<div class="hidden" id="autocomplete-popup" style="position: absolute; bottom: 160px; left: 24px; right: 24px; background: var(--panel-glass); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--panel-border); border-radius: 16px; overflow: hidden; box-shadow: 0 -10px 40px rgba(0,0,0,0.5); display: flex; flex-direction: column; z-index: 100; max-height: 300px; overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none;">
-<!-- Content dynamically populated by app.js -->
-</div>
+
 </section>
 <!-- ====== RATINGS HEADER (slides down from top on emoji click) ====== -->
 <div class="ratings-header hidden" id="ratings-header">
