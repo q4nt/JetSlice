@@ -1289,10 +1289,19 @@ const app = {
         const dateVal = dateInput && dateInput.value ? dateInput.value : '';
         const dateParam = dateVal ? `&date=${encodeURIComponent(dateVal)}` : '';
 
+        // Try to get restaurant coordinates from customProps or geocode if missing
+        let restLon = null, restLat = null;
+        if (customProps && customProps.coordinates) {
+            restLon = customProps.coordinates[0];
+            restLat = customProps.coordinates[1];
+        }
+
         try {
-            const resp = await fetch(
-                `/api/route?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}&cargo=${cargoType}${dateParam}`
-            );
+            let url = `/api/route?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}&cargo=${cargoType}${dateParam}`;
+            if (restLon && restLat) {
+                url += `&rest_lon=${restLon}&rest_lat=${restLat}&rest_name=${encodeURIComponent(restaurantName)}`;
+            }
+            const resp = await fetch(url);
             const data = await resp.json();
 
             if (!resp.ok) {
@@ -1319,10 +1328,14 @@ const app = {
                     this._activeDestCoords = dCoords;
                     
                     // Chain great-circle arc points for multi-leg journey (Restaurant -> Origin Airport -> Dest Airport -> Destination)
+                    // We start the visual journey at the restaurant
+                    let restCoords = [restLon, restLat];
+                    if (!restLon) restCoords = oCoords;
+
                     const origAirCoords = data.route?.origin?.lon ? [data.route.origin.lon, data.route.origin.lat] : oCoords;
                     const destAirCoords = data.route?.destination?.lon ? [data.route.destination.lon, data.route.destination.lat] : dCoords;
 
-                    const arc1 = this._greatCircleArc(oCoords, origAirCoords, 20);
+                    const arc1 = this._greatCircleArc(restCoords, origAirCoords, 20);
                     const arc2 = this._greatCircleArc(origAirCoords, destAirCoords, 80);
                     const arc3 = this._greatCircleArc(destAirCoords, dCoords, 20);
                     const arcPoints = [...arc1, ...arc2, ...arc3];
@@ -1483,12 +1496,22 @@ const app = {
                     
                     if (data && data.legs && data.legs.length >= 3) {
                         try {
-                            const flightLeg = data.legs.find(l => l.type === 'flight');
+                            const flightLeg = data.legs.find(l => l.type === 'flight' || (l.flight && l.flight.arrival_time));
                             if (flightLeg && flightLeg.flight && flightLeg.flight.arrival_time) {
                                 const arrivalTime = new Date(flightLeg.flight.arrival_time);
-                                const dropoffLeg = data.legs.find(l => l.step === 3) || { duration_minutes: 30 };
-                                const finalEta = new Date(arrivalTime.getTime() + (dropoffLeg.duration_minutes + 15) * 60000);
-                                etaDisplay = finalEta.toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit' });
+                                const dropoffLeg = data.legs.find(l => l.step === 5) || data.legs.find(l => l.step === 3) || { duration_minutes: 30 };
+                                const finalEta = new Date(arrivalTime.getTime() + (dropoffLeg.duration_minutes + 30) * 60000);
+                                etaDisplay = finalEta.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                            } else {
+                                let totalMinutes = 0;
+                                for (let i = 1; i <= 5; i++) {
+                                    const leg = data.legs.find(l => l.step === i);
+                                    if (leg && leg.duration_minutes) {
+                                        totalMinutes += leg.duration_minutes;
+                                    }
+                                }
+                                const finalEta = new Date(new Date().getTime() + totalMinutes * 60000);
+                                etaDisplay = finalEta.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
                             }
                         } catch (e) {}
                     }
@@ -1586,7 +1609,14 @@ const app = {
 
         // Build timeline items from legs
         let html = '';
-        const iconClasses = { 'car-sport': 'uber', 'airplane': 'air', 'car': 'lyft', 'briefcase': 'service' };
+        const iconClasses = { 
+            'car-sport': 'uber', 
+            'airplane': 'air', 
+            'car': 'lyft', 
+            'briefcase': 'service', 
+            'restaurant': 'food',
+            'refresh-circle': 'return'
+        };
 
         data.legs.forEach(leg => {
             const iconClass = iconClasses[leg.icon] || 'service';
@@ -2073,26 +2103,57 @@ const app = {
         const mins = Math.round((totalHours - hrs) * 60);
 
         let etaStr = "--";
+        let isTomorrow = false;
 
-        if (planData.flightData && planData.flightData.length > 0 && planData.legs && planData.legs.length >= 3) {
-            const bestFlight = planData.flightData.reduce((a, b) => a.price < b.price ? a : b);
-            // Ensure arrival_time uses proper ISO
-            const arrivalTime = new Date(bestFlight.arrival_time);
-            
-            // Dropoff drive time from the third leg
-            const dropoffLeg = planData.legs.find(l => l.step === 3) || { duration_minutes: 30 };
-            
-            // Exact ETA = Land Time + Dropoff Uber + 15 min buffer (retrieving cargo)
-            const finalEta = new Date(arrivalTime.getTime() + (dropoffLeg.duration_minutes + 15) * 60000);
-            etaStr = finalEta.toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit' });
-            
+        // Helper: compare two Date objects by their LOCAL calendar date.
+        // Using toLocaleDateString avoids the bug where UTC midnight rollover
+        // causes getDate() to differ even though both times are on the same local day.
+        const _isNextLocalDay = (eta, ref) => {
+            return eta.toLocaleDateString('en-US') !== ref.toLocaleDateString('en-US');
+        };
+
+        // Use the flight leg (step 4) arrival_time as the definitive anchor.
+        // The backend returns legs[] with the flight embedded in step 4; planData.flightData does NOT exist.
+        const flightLegEta = planData.legs ? planData.legs.find(l => l.step === 4 && l.flight && l.flight.arrival_time) : null;
+
+        if (flightLegEta) {
+            const arrivalTime = new Date(flightLegEta.flight.arrival_time);
+            const dropoffLeg = planData.legs.find(l => l.step === 5) || { duration_minutes: 30 };
+            // ETA = plane lands + 30 min deboarding/cargo retrieval + final mile drive
+            const finalEta = new Date(arrivalTime.getTime() + (dropoffLeg.duration_minutes + 30) * 60000);
+            etaStr = finalEta.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            isTomorrow = _isNextLocalDay(finalEta, now);
+        } else if (planData.legs && planData.legs.length >= 3) {
+            // No flight arrival time — sum all leg durations from now
+            let totalMinutes = 0;
+            for (let i = 1; i <= 5; i++) {
+                const leg = planData.legs.find(l => l.step === i);
+                if (leg && leg.duration_minutes) totalMinutes += leg.duration_minutes;
+            }
+            const finalEta = new Date(now.getTime() + totalMinutes * 60000);
+            etaStr = finalEta.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            isTomorrow = _isNextLocalDay(finalEta, now);
         } else {
-            // Fallback generic estimate
+            // Last-resort: distance-based estimate
             const finalEta = new Date(now.getTime() + (hrs * 60 + mins) * 60000);
-            etaStr = finalEta.toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit' });
+            etaStr = finalEta.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            isTomorrow = _isNextLocalDay(finalEta, now);
         }
 
         document.getElementById('dpp-stat-eta').textContent = etaStr;
+        const dayLabel = document.getElementById('dpp-stat-eta-day');
+        if (dayLabel) {
+            dayLabel.style.display = isTomorrow ? 'block' : 'none';
+            // Show the actual day name when it IS tomorrow (or later)
+            if (isTomorrow && flightLegEta) {
+                const arrivalTime = new Date(flightLegEta.flight.arrival_time);
+                const dropoffLeg = planData.legs.find(l => l.step === 5) || { duration_minutes: 30 };
+                const finalEta = new Date(arrivalTime.getTime() + (dropoffLeg.duration_minutes + 30) * 60000);
+                dayLabel.textContent = finalEta.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
+            } else if (isTomorrow) {
+                dayLabel.textContent = 'TOMORROW';
+            }
+        }
 
         // Build timeline steps
         let timelineHTML = '';
@@ -2114,17 +2175,29 @@ const app = {
         }
 
         if (planData.legs && planData.legs.length > 0) {
-            // Calculate Prep Step BEFORE iterating legs
+            const leg1 = planData.legs.find(l => l.step === 1) || { cost: 0, label: 'Courier Dispatch', duration_minutes: 20 };
+            const leg2 = planData.legs.find(l => l.step === 2) || { cost: 0, label: 'Procurement', duration_minutes: 30 };
+            const leg3 = planData.legs.find(l => l.step === 3) || { cost: 0, label: 'Transit to Airport', duration_minutes: 30 };
+            const leg4 = planData.legs.find(l => l.step === 4) || { cost: 0, label: 'Flight', duration_minutes: 120 };
+            const leg5 = planData.legs.find(l => l.step === 5) || { cost: 0, label: 'Delivery to Customer', duration_minutes: 30 };
+            const leg6 = planData.legs.find(l => l.step === 6) || { cost: 0, label: 'Return Journey' };
+            const leg7 = planData.legs.find(l => l.step === 7) || { cost: 0, label: 'Concierge Fee', includes: [] };
+            const leg8 = planData.legs.find(l => l.step === 8) || { cost: 0, label: 'Courier Labor', duration_minutes: 0 };
+            const leg9 = planData.legs.find(l => l.step === 9) || { cost: 0, label: 'JetSlice Platform Fee' };
+
+            // 1. Food Procurement
             let prepEndStr = "ASAP";
             let prepStartStr = "ASAP";
             if (bestFlightTakeoff) {
-                const firstLeg = planData.legs.find(l => l.step === 1) || { duration_minutes: 30 };
-                const endT = new Date(bestFlightTakeoff.getTime() - 60 * 60000); // Airport arrival
-                const startT = new Date(endT.getTime() - (firstLeg.duration_minutes || 30) * 60000); // Uber pickup
-                const prepStartT = new Date(startT.getTime() - 30 * 60000);
+                const endT = new Date(bestFlightTakeoff.getTime() - 60 * 60000);
+                const startT = new Date(endT.getTime() - (leg3.duration_minutes || 30) * 60000);
+                const prepStartT = new Date(startT.getTime() - (leg2.duration_minutes || 30) * 60000 - (leg1.duration_minutes || 20) * 60000);
                 prepEndStr = startT.toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit' });
                 prepStartStr = prepStartT.toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit' });
             }
+
+            const procCost = leg1.cost + leg2.cost;
+            const procTime = (leg1.duration_minutes || 0) + (leg2.duration_minutes || 0);
 
             timelineHTML += `
                 <div class="dpp-step" onclick="this.classList.toggle('expanded')" style="cursor: pointer;">
@@ -2133,109 +2206,173 @@ const app = {
                         <h4>Food Procurement <ion-icon name="chevron-down-outline" style="font-size: 10px; opacity: 0.5;"></ion-icon></h4>
                         <p>${planData.restaurant || 'Restaurant'} - ${planData.foodItem || 'Package'}</p>
                         <div class="dpp-step-meta">
+                            <span class="dpp-meta-chip cost">$${procCost.toFixed(0)}</span>
                             <span class="dpp-meta-chip">${planData.cargoType === 'heated' ? 'Heated Case' : planData.cargoType === 'refrigerated' ? 'Cryo Case' : 'Secure Vault'}</span>
-                            <span class="dpp-meta-chip time">~30min prep</span>
+                            <span class="dpp-meta-chip time">~${procTime}min</span>
                         </div>
                         <div class="dpp-step-expanded">
-                            <div style="display: flex; justify-content: space-between;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 6px; color: #fff;">
+                                <span>1. Dispatch: ${leg1.label}</span>
+                                <span>$${leg1.cost.toFixed(0)}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; color: #fff;">
+                                <span>2. Prep: ${leg2.label}</span>
+                                <span>~${leg2.duration_minutes || 30}m</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 6px;">
                                 <span style="color: white; font-weight: 500;">Order: ${prepStartStr}</span>
                                 <span>Ready: ${prepEndStr}</span>
                             </div>
                         </div>
                     </div>
                 </div>`;
-            legCount++;
+            legCount += 2; // For spacing
 
-            // Dynamically build from API response
-            planData.legs.forEach((leg, i) => {
-                legCount++;
-                let iconClass = 'rideshare';
-                let iconName = 'car-sport';
-                let timeStr = '';
+            // 2. Logistics & Transit
+            const transitCost = leg3.cost + leg4.cost + leg5.cost;
+            const transitTime = (leg3.duration_minutes || 0) + (Math.round(dist/500*60)) + (leg5.duration_minutes || 0);
+            
+            let transitStart = "ASAP";
+            let transitEnd = "TBD";
+
+            // Compute detailed sub-step timestamps
+            let rideStartStr = "--", rideEndStr = "--";
+            let tsaStartStr = "--", tsaEndStr = "--";
+            let flightDepStr = "--", flightArrStr = "--";
+            let deboardEndStr = "--";
+            let finalMileStartStr = "--", finalMileEndStr = "--";
+
+            if (bestFlightTakeoff && bestFlightLand) {
+                // Transit Start = depart time - 1hr TSA - ride time
+                const depT = new Date(bestFlightTakeoff.getTime() - 120 * 60000 - (leg3.duration_minutes || 30) * 60000);
+                transitStart = depT.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+                // Ride: restaurant -> airport
+                rideStartStr = depT.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                const rideEnd = new Date(depT.getTime() + (leg3.duration_minutes || 30) * 60000);
+                rideEndStr = rideEnd.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+                // TSA / Check-in
+                tsaStartStr = rideEndStr;
+                tsaEndStr = bestFlightTakeoff.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+                // Flight
+                flightDepStr = bestFlightTakeoff.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                flightArrStr = bestFlightLand.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+                // Deboarding (30 min)
+                const deboardEnd = new Date(bestFlightLand.getTime() + 30 * 60000);
+                deboardEndStr = deboardEnd.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+                // Final mile
+                finalMileStartStr = deboardEndStr;
+                const finalMileEnd = new Date(deboardEnd.getTime() + (leg5.duration_minutes || 30) * 60000);
+                finalMileEndStr = finalMileEnd.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
                 
-                let stepStart = "";
-                let stepEnd = "";
+                transitEnd = finalMileEndStr;
+            }
 
-                if (leg.type === 'flight') {
-                    iconClass = 'flight';
-                    iconName = 'airplane';
-                    flightCost = leg.cost || 0;
-                    const flightTime = Math.round(dist / 500 * 60);
-                    timeStr = Math.floor(flightTime / 60) + 'h ' + (flightTime % 60) + 'm';
-                    
-                    if (bestFlightTakeoff && bestFlightLand) {
-                        stepStart = "Takeoff: " + bestFlightTakeoff.toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit' });
-                        stepEnd = "Land: " + bestFlightLand.toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit' });
-                    }
-                } else if (leg.type === 'rideshare') {
-                    if (leg.label && leg.label.toLowerCase().includes('lyft')) {
-                        iconClass = 'lyft';
-                        iconName = 'car';
-                        lastMileCost = leg.cost || 0;
-                        if (bestFlightLand) {
-                            const startT = new Date(bestFlightLand.getTime() + 15 * 60000);
-                            const endT = new Date(startT.getTime() + (leg.duration_minutes || 30) * 60000);
-                            stepStart = "Pickup: " + startT.toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit' });
-                            stepEnd = "Dropoff: " + endT.toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit' });
-                        }
-                    } else {
-                        iconClass = 'rideshare';
-                        iconName = 'car-sport';
-                        pickupCost = leg.cost || 0;
-                        if (bestFlightTakeoff) {
-                            const endT = new Date(bestFlightTakeoff.getTime() - 60 * 60000); // arrive at airport 1h early
-                            const startT = new Date(endT.getTime() - (leg.duration_minutes || 30) * 60000);
-                            stepStart = "Pickup: " + startT.toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit' });
-                            stepEnd = "Terminal: " + endT.toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit' });
-                        }
-                    }
-                    timeStr = '~' + (leg.duration_minutes || Math.round(15 + Math.random() * 30)) + 'min';
-                } else if (leg.type === 'concierge') {
-                    iconClass = 'concierge';
-                    iconName = 'briefcase';
-                    conciergeCost = leg.cost || 0;
-                    if (bestFlightLand) {
-                        const dropoffLeg = planData.legs.find(l => l.step === 3) || { duration_minutes: 30 };
-                        const startT = new Date(bestFlightLand.getTime() + (15 + dropoffLeg.duration_minutes) * 60000);
-                        stepStart = "Handoff: " + startT.toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit' });
-                        stepEnd = "Complete";
-                    }
-                }
-
-                timelineHTML += `
-                    <div class="dpp-step" onclick="this.classList.toggle('expanded')" style="cursor: pointer;">
-                        <div class="dpp-step-icon ${iconClass}"><ion-icon name="${iconName}"></ion-icon></div>
-                        <div class="dpp-step-body">
-                            <h4>${leg.label || 'Transport Leg'} <ion-icon name="chevron-down-outline" style="font-size: 10px; opacity: 0.5;"></ion-icon></h4>
-                            <p>${leg.flight ? (leg.flight.origin + ' to ' + leg.flight.destination) : (leg.includes ? leg.includes.join(' + ') : '')}</p>
-                            <div class="dpp-step-meta">
-                                <span class="dpp-meta-chip cost">$${(leg.cost || 0).toFixed(0)}</span>
-                                ${timeStr ? '<span class="dpp-meta-chip time">' + timeStr + '</span>' : ''}
-                            </div>
-                            <div class="dpp-step-expanded">
-                                <div style="display: flex; justify-content: space-between;">
-                                    <span style="color: white; font-weight: 500;">${stepStart || 'ASAP'}</span>
-                                    <span>${stepEnd || 'TBD'}</span>
+            timelineHTML += `
+                <div class="dpp-step" onclick="this.classList.toggle('expanded')" style="cursor: pointer;">
+                    <div class="dpp-step-icon flight"><ion-icon name="airplane"></ion-icon></div>
+                    <div class="dpp-step-body">
+                        <h4>Logistics & Transit <ion-icon name="chevron-down-outline" style="font-size: 10px; opacity: 0.5;"></ion-icon></h4>
+                        <p>Origin City to Customer Doorstep</p>
+                        <div class="dpp-step-meta">
+                            <span class="dpp-meta-chip cost">$${transitCost.toFixed(0)}</span>
+                            <span class="dpp-meta-chip time">${Math.floor(transitTime/60)}h ${transitTime%60}m</span>
+                        </div>
+                        <div class="dpp-step-expanded">
+                            <div onclick="event.stopPropagation(); this.classList.toggle('sub-expanded')" style="margin-bottom: 8px; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 8px 10px; background: rgba(255,255,255,0.03);">
+                                <div style="display: flex; justify-content: space-between; color: #fff;">
+                                    <span>&#8226; Origin Ride: ${leg3.label} <ion-icon name="chevron-down-outline" style="font-size: 9px; opacity: 0.4; vertical-align: middle;"></ion-icon></span>
+                                    <span>$${leg3.cost.toFixed(0)}</span>
+                                </div>
+                                <div class="sub-detail" style="display: none; margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.06); font-size: 12px; color: var(--text-secondary);">
+                                    <div style="display: flex; justify-content: space-between;"><span>Depart restaurant</span><span>${rideStartStr}</span></div>
+                                    <div style="display: flex; justify-content: space-between;"><span>Arrive at airport</span><span>${rideEndStr}</span></div>
+                                    <div style="display: flex; justify-content: space-between;"><span>Drive time</span><span>~${leg3.duration_minutes || 30}min</span></div>
                                 </div>
                             </div>
+                            <div onclick="event.stopPropagation(); this.classList.toggle('sub-expanded')" style="margin-bottom: 8px; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 8px 10px; background: rgba(255,255,255,0.03);">
+                                <div style="display: flex; justify-content: space-between; color: #fff;">
+                                    <span>&#8226; Air Cargo: ${leg4.label} <ion-icon name="chevron-down-outline" style="font-size: 9px; opacity: 0.4; vertical-align: middle;"></ion-icon></span>
+                                    <span>$${leg4.cost.toFixed(0)}</span>
+                                </div>
+                                <div class="sub-detail" style="display: none; margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.06); font-size: 12px; color: var(--text-secondary);">
+                                    <div style="display: flex; justify-content: space-between;"><span>TSA / Cargo Check-in</span><span>${tsaStartStr} - ${tsaEndStr}</span></div>
+                                    <div style="display: flex; justify-content: space-between;"><span>Flight Departs</span><span style="color: var(--accent-color); font-weight: 600;">${flightDepStr}</span></div>
+                                    <div style="display: flex; justify-content: space-between;"><span>Flight Lands</span><span style="color: var(--accent-color); font-weight: 600;">${flightArrStr}</span></div>
+                                    <div style="display: flex; justify-content: space-between;"><span>Deboarding + Cargo Retrieval</span><span>+30min -> ${deboardEndStr}</span></div>
+                                </div>
+                            </div>
+                            <div onclick="event.stopPropagation(); this.classList.toggle('sub-expanded')" style="margin-bottom: 8px; cursor: pointer; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 8px 10px; background: rgba(255,255,255,0.03);">
+                                <div style="display: flex; justify-content: space-between; color: #fff;">
+                                    <span>&#8226; Final Mile: ${leg5.label} <ion-icon name="chevron-down-outline" style="font-size: 9px; opacity: 0.4; vertical-align: middle;"></ion-icon></span>
+                                    <span>$${leg5.cost.toFixed(0)}</span>
+                                </div>
+                                <div class="sub-detail" style="display: none; margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.06); font-size: 12px; color: var(--text-secondary);">
+                                    <div style="display: flex; justify-content: space-between;"><span>Uber pickup at airport</span><span>${finalMileStartStr}</span></div>
+                                    <div style="display: flex; justify-content: space-between;"><span>Arrive at customer</span><span style="color: #34c759; font-weight: 600;">${finalMileEndStr}</span></div>
+                                    <div style="display: flex; justify-content: space-between;"><span>Drive time</span><span>~${leg5.duration_minutes || 30}min</span></div>
+                                </div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 6px;">
+                                <span style="color: white; font-weight: 500;">Depart: ${transitStart}</span>
+                                <span>Arrive: ${transitEnd}</span>
+                            </div>
                         </div>
-                    </div>`;
-            });
+                    </div>
+                </div>`;
+            legCount += 3; // For spacing
+
+            // 3. Return Ops & Concierge
+            const opCost = leg6.cost + leg7.cost + leg8.cost + leg9.cost;
+            timelineHTML += `
+                <div class="dpp-step" onclick="this.classList.toggle('expanded')" style="cursor: pointer;">
+                    <div class="dpp-step-icon concierge"><ion-icon name="briefcase"></ion-icon></div>
+                    <div class="dpp-step-body">
+                        <h4>Overhead & Return Ops <ion-icon name="chevron-down-outline" style="font-size: 10px; opacity: 0.5;"></ion-icon></h4>
+                        <p>Courier Return, Labor & Platinum Fees</p>
+                        <div class="dpp-step-meta">
+                            <span class="dpp-meta-chip cost">$${opCost.toFixed(0)}</span>
+                        </div>
+                        <div class="dpp-step-expanded">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 6px; color: #fff;">
+                                <span>• Return Transport ($${leg6.cost.toFixed(0)})</span>
+                            </div>
+                            <div style="margin-bottom: 6px; padding-left: 10px; border-left: 2px solid rgba(255,255,255,0.2);">
+                                ${leg6.includes ? leg6.includes.map(inc => `<div style="margin-bottom: 2px;">- ${inc}</div>`).join('') : ''}
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-top: 6px; color: #fff;">
+                                <span>• Concierge Fee: ${leg7.label}</span>
+                                <span>$${leg7.cost.toFixed(0)}</span>
+                            </div>
+                            <div style="margin-top: 2px; padding-left: 10px; border-left: 2px solid rgba(255,255,255,0.2);">
+                                ${leg7.includes ? leg7.includes.map(inc => `<div style="margin-bottom: 2px;">- ${inc}</div>`).join('') : ''}
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.1); color: #fff;">
+                                <span>• Courier Labor (~${Math.round(leg8.duration_minutes/60)}h)</span>
+                                <span>$${leg8.cost.toFixed(0)}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-top: 6px; color: #fff;">
+                                <span>• 20% Platform Fee</span>
+                                <span style="color: var(--accent-color); font-weight: bold;">$${leg9.cost.toFixed(0)}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            legCount += 2; // For spacing
+
         } else {
-            // Fallback: generate estimated plan
+            // Fallback: generic consolidated 3-step plan
             pickupCost = 85 + Math.round(Math.random() * 60);
             flightCost = 380 + Math.round(dist * 0.15);
             lastMileCost = 55 + Math.round(Math.random() * 40);
             conciergeCost = 250 + Math.round(dist * 0.1);
             const flightMinutes = Math.round(dist / 500 * 60);
 
-            let fallbackCur = new Date();
-
-            // Step 1: Pickup
-            let f1Start = fallbackCur.toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit' });
-            fallbackCur = new Date(fallbackCur.getTime() + 30 * 60000);
-            let f1End = fallbackCur.toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit' });
-
+            // 1. Procurement
             timelineHTML += `
                 <div class="dpp-step" onclick="this.classList.toggle('expanded')" style="cursor: pointer;">
                     <div class="dpp-step-icon pickup"><ion-icon name="restaurant-outline"></ion-icon></div>
@@ -2243,125 +2380,85 @@ const app = {
                         <h4>Food Procurement <ion-icon name="chevron-down-outline" style="font-size: 10px; opacity: 0.5;"></ion-icon></h4>
                         <p>${planData.restaurant || 'Restaurant'} - ${planData.foodItem || 'Package'}</p>
                         <div class="dpp-step-meta">
+                            <span class="dpp-meta-chip cost">$${(pickupCost / 2).toFixed(0)}</span>
                             <span class="dpp-meta-chip">${planData.cargoType === 'heated' ? 'Heated Case' : planData.cargoType === 'refrigerated' ? 'Cryo Case' : 'Secure Vault'}</span>
-                            <span class="dpp-meta-chip time">~30min prep</span>
+                            <span class="dpp-meta-chip time">~45min</span>
                         </div>
                         <div class="dpp-step-expanded">
-                            <div>
-                                <span style="color: white; font-weight: 500;">Order: ${f1Start}</span>
-                                <span>Ready: ${f1End}</span>
+                            <div style="display: flex; justify-content: space-between; color: white;">
+                                <span>1. Courier Dispatch</span>
+                                <span>$${(pickupCost / 2).toFixed(0)}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-top: 4px; color: white;">
+                                <span>2. Prep Wait Time</span>
+                                <span>~30m</span>
                             </div>
                         </div>
                     </div>
                 </div>`;
             legCount++;
 
-            // Step 2: Ground to airport
-            let f2Start = fallbackCur.toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit' });
-            fallbackCur = new Date(fallbackCur.getTime() + 35 * 60000);
-            let f2End = fallbackCur.toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit' });
-
-            timelineHTML += `
-                <div class="dpp-step" onclick="this.classList.toggle('expanded')" style="cursor: pointer;">
-                    <div class="dpp-step-icon rideshare"><ion-icon name="car-sport"></ion-icon></div>
-                    <div class="dpp-step-body">
-                        <h4>Uber Black SUV <ion-icon name="chevron-down-outline" style="font-size: 10px; opacity: 0.5;"></ion-icon></h4>
-                        <p>Transit to departing airport</p>
-                        <div class="dpp-step-meta">
-                            <span class="dpp-meta-chip cost">$${pickupCost}</span>
-                            <span class="dpp-meta-chip time">~35min</span>
-                        </div>
-                        <div class="dpp-step-expanded">
-                            <div>
-                                <span style="color: white; font-weight: 500;">Pickup: ${f2Start}</span>
-                                <span>Terminal: ${f2End}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>`;
-            legCount++;
-
-            // Step 3: Flight
-            fallbackCur = new Date(fallbackCur.getTime() + 45 * 60000); // 45min terminal wait
-            let f3Start = fallbackCur.toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit' });
-            fallbackCur = new Date(fallbackCur.getTime() + flightMinutes * 60000);
-            let f3End = fallbackCur.toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit' });
-
+            // 2. Logistics & Transit
+            const comboTransit = (pickupCost / 2) + flightCost + lastMileCost;
             timelineHTML += `
                 <div class="dpp-step" onclick="this.classList.toggle('expanded')" style="cursor: pointer;">
                     <div class="dpp-step-icon flight"><ion-icon name="airplane"></ion-icon></div>
                     <div class="dpp-step-body">
-                        <h4>Premium Priority Cargo <ion-icon name="chevron-down-outline" style="font-size: 10px; opacity: 0.5;"></ion-icon></h4>
-                        <p>American Airlines - First Class Environment</p>
+                        <h4>Logistics & Transit <ion-icon name="chevron-down-outline" style="font-size: 10px; opacity: 0.5;"></ion-icon></h4>
+                        <p>Origin City to Customer Doorstep</p>
                         <div class="dpp-step-meta">
-                            <span class="dpp-meta-chip cost">$${flightCost}</span>
-                            <span class="dpp-meta-chip time">${Math.floor(flightMinutes / 60)}h ${flightMinutes % 60}m</span>
+                            <span class="dpp-meta-chip cost">$${comboTransit.toFixed(0)}</span>
+                            <span class="dpp-meta-chip time">ETA: ${Math.floor(flightMinutes / 60)}h ${flightMinutes % 60}m</span>
                         </div>
                         <div class="dpp-step-expanded">
-                            <div>
-                                <span style="color: white; font-weight: 500;">Takeoff: ${f3Start}</span>
-                                <span>Land: ${f3End}</span>
+                            <div style="display: flex; justify-content: space-between; color: white; margin-bottom: 4px;">
+                                <span>• Origin Ride</span>
+                                <span>$${(pickupCost / 2).toFixed(0)}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; color: white; margin-bottom: 4px;">
+                                <span>• Air Cargo</span>
+                                <span>$${flightCost.toFixed(0)}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; color: white;">
+                                <span>• Final Mile Dropoff</span>
+                                <span>$${lastMileCost.toFixed(0)}</span>
                             </div>
                         </div>
                     </div>
                 </div>`;
             legCount++;
 
-            // Step 4: Dropoff
-            fallbackCur = new Date(fallbackCur.getTime() + 15 * 60000); // retrieve package
-            let f4Start = fallbackCur.toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit' });
-            fallbackCur = new Date(fallbackCur.getTime() + 40 * 60000);
-            let f4End = fallbackCur.toLocaleTimeString('en-US', { timeZone: 'America/Chicago', hour: '2-digit', minute: '2-digit' });
+            // 3. Ops & Return
+            const laborCostF = comboTransit * 0.15;
+            const opCostF = flightCost * 0.8 + 80 + conciergeCost + laborCostF;
+            const platFeeF = (comboTransit + opCostF) * 0.2;
 
-            timelineHTML += `
-                <div class="dpp-step" onclick="this.classList.toggle('expanded')" style="cursor: pointer;">
-                    <div class="dpp-step-icon lyft"><ion-icon name="car"></ion-icon></div>
-                    <div class="dpp-step-body">
-                        <h4>Lyft Lux Last-Mile <ion-icon name="chevron-down-outline" style="font-size: 10px; opacity: 0.5;"></ion-icon></h4>
-                        <p>Airport terminal direct to delivery point</p>
-                        <div class="dpp-step-meta">
-                            <span class="dpp-meta-chip cost">$${lastMileCost}</span>
-                            <span class="dpp-meta-chip time">~40min</span>
-                        </div>
-                        <div class="dpp-step-expanded">
-                            <div>
-                                <span style="color: white; font-weight: 500;">Pickup: ${f4Start}</span>
-                                <span>Dropoff: ${f4End}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>`;
-            legCount++;
-
-            // Step 5: Concierge
             timelineHTML += `
                 <div class="dpp-step" onclick="this.classList.toggle('expanded')" style="cursor: pointer;">
                     <div class="dpp-step-icon concierge"><ion-icon name="briefcase"></ion-icon></div>
                     <div class="dpp-step-body">
-                        <h4>Concierge Handling Fee <ion-icon name="chevron-down-outline" style="font-size: 10px; opacity: 0.5;"></ion-icon></h4>
-                        <p>Temperature-controlled transit + dedicated agent</p>
+                        <h4>Overhead & Return Ops <ion-icon name="chevron-down-outline" style="font-size: 10px; opacity: 0.5;"></ion-icon></h4>
+                        <p>Courier Return, Labor & Platinum Fees</p>
                         <div class="dpp-step-meta">
-                            <span class="dpp-meta-chip cost">$${conciergeCost}</span>
+                            <span class="dpp-meta-chip cost">$${(opCostF + platFeeF).toFixed(0)}</span>
                         </div>
                         <div class="dpp-step-expanded">
-                            <div>
-                                <span style="color: white; font-weight: 500;">Handoff: ${f4End}</span>
-                                <span>Complete</span>
+                            <div style="display: flex; justify-content: space-between; color: white; margin-bottom: 4px;">
+                                <span>• Return Journey</span>
+                                <span>~ $${(opCostF - conciergeCost - laborCostF).toFixed(0)}</span>
                             </div>
-                        </div>
-                    </div>
-                </div>`;
-            legCount++;
-
-            // Step 6: Delivery
-            timelineHTML += `
-                <div class="dpp-step">
-                    <div class="dpp-step-icon dropoff"><ion-icon name="checkmark-circle"></ion-icon></div>
-                    <div class="dpp-step-body">
-                        <h4>Doorstep Delivery</h4>
-                        <p>${destCity}</p>
-                        <div class="dpp-step-meta">
-                            <span class="dpp-meta-chip time">ETA: ${hrs}h ${mins}m total</span>
+                            <div style="display: flex; justify-content: space-between; color: white;">
+                                <span>• Concierge Fee</span>
+                                <span>$${conciergeCost.toFixed(0)}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.1); color: #fff;">
+                                <span>• Courier Labor (~${Math.round(flightMinutes/60 + 2)}h)</span>
+                                <span>$${laborCostF.toFixed(0)}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-top: 6px; color: #fff;">
+                                <span>• 20% Platform Fee</span>
+                                <span style="color: var(--accent-color); font-weight: bold;">$${platFeeF.toFixed(0)}</span>
+                            </div>
                         </div>
                     </div>
                 </div>`;
@@ -2370,39 +2467,49 @@ const app = {
 
         timeline.innerHTML = timelineHTML;
 
-        // Default pricing fallbacks for the cost table when legs are missing
-        const unitedPrice = flightCost > 0 ? flightCost : Math.round(380 + dist * 0.15);
-        const uberBlack = pickupCost > 0 ? pickupCost : Math.round(85 + Math.random() * 60);
-        const lyftLux = lastMileCost > 0 ? lastMileCost : Math.round(55 + Math.random() * 40);
-
-
         // Cost breakdown synchronized exactly with the primary execution panel (backend source of truth)
-        const baseTotal = planData.totalCost || computedTotal || 1000;
-        const groundTotal = (pickupCost || uberBlack) + (lastMileCost || lyftLux);
-        const airTotal = (flightCost || unitedPrice);
-        const estTaxes = Math.round(baseTotal * 0.085); // Estimated split of the backend's margin
+        let groundTotal = 0, airTotal = 0, dynamicConcierge = 0, estTaxes = 0, courierLabor = 0;
         
-        // Backfill concierge handling remainder so everything perfectly balances to the unified total
-        const dynamicConcierge = Math.max(0, Math.round(baseTotal - groundTotal - airTotal - estTaxes));
-        const grandTotal = Math.round(baseTotal);
+        if (planData.legs && planData.legs.length > 0) {
+            groundTotal = (planData.legs.find(l => l.step === 1)?.cost || 0) + 
+                          (planData.legs.find(l => l.step === 3)?.cost || 0) + 
+                          (planData.legs.find(l => l.step === 5)?.cost || 0) + 
+                          (planData.legs.find(l => l.step === 6)?.cost || 0); // Ground return ride
+            airTotal = (planData.legs.find(l => l.step === 4)?.cost || 0);
+            dynamicConcierge = (planData.legs.find(l => l.step === 7)?.cost || 0);
+            courierLabor = (planData.legs.find(l => l.step === 8)?.cost || 0);
+            estTaxes = (planData.legs.find(l => l.step === 9)?.cost || 0);
+        } else {
+            groundTotal = (pickupCost || 85) + (lastMileCost || 55);
+            airTotal = (flightCost || 380);
+            dynamicConcierge = conciergeCost || 250;
+            courierLabor = 150;
+            estTaxes = ((groundTotal + airTotal + dynamicConcierge + courierLabor) * 0.2);
+        }
+
+        const grandTotal = Math.round(planData.total_cost || (groundTotal + airTotal + dynamicConcierge + courierLabor + estTaxes));
 
         costSummary.innerHTML = `
             <div style="font-size: 10px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; font-weight: 600;">Fee Breakdown</div>
             <div style="display: flex; justify-content: space-between; font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 4px;">
                 <span>Ground Transport (Orig & Dest)</span>
-                <span>$${groundTotal.toLocaleString()}</span>
+                <span>$${groundTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
             </div>
             <div style="display: flex; justify-content: space-between; font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 4px;">
                 <span>Premium Flight Cargo</span>
-                <span>$${airTotal.toLocaleString()}</span>
+                <span>$${airTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
             </div>
             <div style="display: flex; justify-content: space-between; font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 4px;">
                 <span>Concierge & Handling</span>
-                <span>$${dynamicConcierge.toLocaleString()}</span>
+                <span>$${dynamicConcierge.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 4px;">
+                <span>Courier Labor Rate ($50/hr)</span>
+                <span>$${courierLabor.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
             </div>
             <div style="display: flex; justify-content: space-between; font-size: 11px; color: rgba(255,255,255,0.4); margin-bottom: 4px; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.05);">
-                <span>Est. Taxes & Platform Fees</span>
-                <span>$${estTaxes.toLocaleString()}</span>
+                <span>JetSlice Service Fee (20%)</span>
+                <span>$${estTaxes.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
             </div>`;
 
         document.getElementById('dpp-total-cost').textContent = '$' + grandTotal.toLocaleString();

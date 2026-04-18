@@ -151,20 +151,35 @@ def haversine_miles(lat1, lon1, lat2, lon2):
     return R * 2 * math.asin(math.sqrt(a))
 
 # ---------------------------------------------------------------------------
-# GDS Flight Data (United & American Airlines via Amadeus or Mock)
+# GDS Flight Data (All Major Carriers via SerpAPI/Amadeus or Mock)
 # ---------------------------------------------------------------------------
+AIRLINE_REGISTRY = {
+    "UA": "United Airlines",
+    "AA": "American Airlines",
+    "NK": "Spirit Airlines",
+    "F9": "Frontier Airlines",
+    "AS": "Alaska Airlines",
+    "WN": "Southwest Airlines",
+    "DL": "Delta Air Lines",
+    "B6": "JetBlue Airways",
+}
+
 GDS_FLIGHT_NUMBERS = [
     "UA412", "UA1583", "AA2210", "AA887", "UA453",
-    "AA1721", "UA622", "UA990", "AA1147", "UA336"
+    "AA1721", "UA622", "UA990", "AA1147", "UA336",
+    "NK412", "NK1023", "NK507", "NK819",
+    "F93397", "F91282", "F9756", "F91590",
+    "AS1142", "AS337", "AS692", "AS1455"
 ]
 
 def search_gds_flights(origin_iata, dest_iata, departure_date=None):
     """
-    Search United and American Airlines flights via Amadeus API.
-    Falls back to realistic mock data if API unavailable.
+    Search flights across all major carriers (United, American, Spirit,
+    Frontier, Alaska) via SerpAPI Google Flights or Amadeus API.
+    Falls back to realistic multi-carrier mock data if APIs unavailable.
     """
     if not departure_date:
-        departure_date = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
+        departure_date = datetime.now().strftime('%Y-%m-%d')
 
     # --- Try SerpAPI (Google Flights Live) ---
     if SERPAPI_KEY:
@@ -244,7 +259,7 @@ def search_gds_flights(origin_iata, dest_iata, departure_date=None):
         except Exception as e:
             print(f"[SerpAPI] Error resolving flights: {e}")
 
-    # --- Try Amadeus API first ---
+    # --- Try Amadeus API ---
     if amadeus_client:
         try:
             response = amadeus_client.shopping.flight_offers_search.get(
@@ -252,9 +267,9 @@ def search_gds_flights(origin_iata, dest_iata, departure_date=None):
                 destinationLocationCode=dest_iata,
                 departureDate=departure_date,
                 adults=1,
-                max=5,
+                max=10,
                 nonStop=True,
-                includedAirlineCodes='UA,AA'  # Filter to United and American Airlines
+                includedAirlineCodes='UA,AA,NK,F9,AS'  # All target carriers
             )
             flights = []
             for offer in response.data:
@@ -263,7 +278,8 @@ def search_gds_flights(origin_iata, dest_iata, departure_date=None):
                 last_seg = segments[-1]
                 
                 carrier = first_seg['carrierCode']
-                airline_name = "United Airlines" if carrier == 'UA' else "American Airlines"
+                airline_name = AIRLINE_REGISTRY.get(carrier, carrier)
+                price_val = float(offer['price']['total'])
                 
                 flights.append({
                     "airline": airline_name,
@@ -275,83 +291,118 @@ def search_gds_flights(origin_iata, dest_iata, departure_date=None):
                     "arrival_time": last_seg['arrival']['at'],
                     "duration": offer['itineraries'][0]['duration'],
                     "stops": len(segments) - 1,
-                    "price": float(offer['price']['total']),
+                    "price": price_val,
+                    "price_economy": price_val,
                     "currency": offer['price']['currency'],
-                    "cabin": "FIRST" if float(offer['price']['total']) > 400 else "ECONOMY",
+                    "cabin": offer.get('travelerPricings', [{}])[0].get('fareDetailsBySegment', [{}])[0].get('cabin', 'ECONOMY'),
                     "source": "amadeus_live",
                     "bookable": True
                 })
             if flights:
-                print(f"[JetSlice] Found {len(flights)} live GDS flights (UA/AA): {origin_iata} -> {dest_iata}")
+                print(f"[JetSlice] Found {len(flights)} live Amadeus flights: {origin_iata} -> {dest_iata}")
                 return flights
         except ResponseError as e:
-            print(f"[United] Amadeus error: {e}")
+            print(f"[Amadeus] API error: {e}")
         except Exception as e:
-            print(f"[United] API error: {e}")
+            print(f"[Amadeus] API error: {e}")
+
+    # --- Try Google Flights Scraper ---
+    try:
+        from flight_scraper import scrape_google_flights
+        scraped_flights = scrape_google_flights(origin_iata, dest_iata, departure_date)
+        if scraped_flights:
+            print(f"[JetSlice] Found {len(scraped_flights)} scraped Google Flights: {origin_iata} -> {dest_iata}")
+            return scraped_flights
+    except Exception as e:
+        print(f"[Scraper] Integration error: {e}")
 
     # --- Mock fallback ---
     return _mock_gds_flights(origin_iata, dest_iata, departure_date)
 
 
 def _mock_gds_flights(origin, dest, departure_date):
-    """Generate realistic mock United/AA flight data."""
+    """Generate realistic mock flight data across all target carriers."""
     distance = 0
     orig_data = next((v for v in AIRPORT_MAP.values() if v['iata'] == origin), None)
     dest_data = next((v for v in AIRPORT_MAP.values() if v['iata'] == dest), None)
     if orig_data and dest_data:
         distance = haversine_miles(orig_data['lat'], orig_data['lon'], dest_data['lat'], dest_data['lon'])
 
-    # Price scales with distance
-    base_economy = max(120, distance * 0.12 + random.randint(-30, 50))
-    base_first = base_economy * 2.8 + random.randint(50, 200)
-
-    flight_num = random.choice(GDS_FLIGHT_NUMBERS)
-    carrier_code = "AA" if "AA" in flight_num else "UA"
-    airline_name = "American Airlines" if carrier_code == "AA" else "United Airlines"
-    
-    flight_num2 = random.choice([f for f in GDS_FLIGHT_NUMBERS if f != flight_num])
-    carrier_code2 = "AA" if "AA" in flight_num2 else "UA"
-    airline_name2 = "American Airlines" if carrier_code2 == "AA" else "United Airlines"
-
-    dep_hour = random.choice([6, 7, 8, 9, 10, 11, 14, 15, 16, 17, 18, 20])
     flight_hours = max(2, distance / 500)
-    arr_hour = dep_hour + flight_hours
 
-    return [{
-        "airline": airline_name,
-        "carrier_code": carrier_code,
-        "flight_number": flight_num,
-        "origin": origin,
-        "destination": dest,
-        "departure_time": f"{departure_date}T{dep_hour:02d}:00:00",
-        "arrival_time": f"{departure_date}T{int(arr_hour):02d}:{int((arr_hour % 1)*60):02d}:00",
-        "duration": f"PT{int(flight_hours)}H{int((flight_hours % 1)*60)}M",
-        "stops": 0,
-        "price": round(base_first, 2),
-        "price_economy": round(base_economy, 2),
-        "currency": "USD",
-        "cabin": "FIRST",
-        "distance_miles": round(distance),
-        "source": "mock",
-        "bookable": False
-    }, {
-        "airline": airline_name2,
-        "carrier_code": carrier_code2,
-        "flight_number": flight_num2,
-        "origin": origin,
-        "destination": dest,
-        "departure_time": f"{departure_date}T{(dep_hour+4) % 24:02d}:30:00",
-        "arrival_time": f"{departure_date}T{int(arr_hour+4) % 24:02d}:{int((arr_hour % 1)*60):02d}:00",
-        "duration": f"PT{int(flight_hours)}H{int((flight_hours % 1)*60)}M",
-        "stops": 0,
-        "price": round(base_first * 0.9, 2),
-        "price_economy": round(base_economy * 0.95, 2),
-        "currency": "USD",
-        "cabin": "FIRST",
-        "distance_miles": round(distance),
-        "source": "mock",
-        "bookable": False
-    }]
+    # Carrier-specific pricing models (economy base rates)
+    CARRIER_PRICING = {
+        "UA": {"econ_mult": 1.0,  "first_mult": 2.8},
+        "AA": {"econ_mult": 1.0,  "first_mult": 2.7},
+        "NK": {"econ_mult": 0.55, "first_mult": 1.0},   # Ultra-low-cost, no first class
+        "F9": {"econ_mult": 0.50, "first_mult": 1.0},   # Ultra-low-cost, no first class
+        "AS": {"econ_mult": 0.85, "first_mult": 2.2},
+    }
+
+    # Brand colors for display
+    COLORS = {
+        "UA": "#005DAA", "AA": "#B61F23", "NK": "#FFD200",
+        "F9": "#004225", "AS": "#01426A", "WN": "#E24726",
+    }
+
+    base_economy = max(120, distance * 0.12 + random.randint(-30, 50))
+
+    # Generate staggered departure times across the day
+    dep_slots = sorted(random.sample([6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 19, 20, 21], min(5, 15)))
+
+    # Pick 4-5 distinct carriers for this route
+    carrier_pool = list(CARRIER_PRICING.keys())
+    random.shuffle(carrier_pool)
+    flights = []
+
+    for i, carrier_code in enumerate(carrier_pool):
+        pricing = CARRIER_PRICING[carrier_code]
+        dep_hour = dep_slots[i % len(dep_slots)]
+        dep_min = random.choice([0, 15, 30, 45])
+        arr_raw = dep_hour + flight_hours + dep_min / 60.0
+        arr_h = int(arr_raw)
+        arr_m = int((arr_raw - arr_h) * 60)
+
+        # Handle overnight wrap
+        if arr_h >= 24:
+            arr_h = arr_h % 24
+
+        econ_price = round(base_economy * pricing["econ_mult"] + random.randint(-20, 40), 2)
+        econ_price = max(49, econ_price)  # Budget carriers can go very low
+        first_price = round(econ_price * pricing["first_mult"] + random.randint(0, 100), 2)
+
+        # Pick a flight number for this carrier
+        carrier_nums = [f for f in GDS_FLIGHT_NUMBERS if f.startswith(carrier_code)]
+        flight_num = random.choice(carrier_nums) if carrier_nums else f"{carrier_code}{random.randint(100,9999)}"
+
+        has_first = pricing["first_mult"] > 1.0
+        cabin = "FIRST" if has_first else "ECONOMY"
+
+        flights.append({
+            "airline": AIRLINE_REGISTRY.get(carrier_code, carrier_code),
+            "carrier_code": carrier_code,
+            "code": carrier_code,
+            "color": COLORS.get(carrier_code, "#4ade80"),
+            "flight_number": flight_num,
+            "flightNum": flight_num,
+            "origin": origin,
+            "destination": dest,
+            "departure_time": f"{departure_date}T{dep_hour:02d}:{dep_min:02d}:00",
+            "arrival_time": f"{departure_date}T{arr_h:02d}:{arr_m:02d}:00",
+            "duration": f"PT{int(flight_hours)}H{int((flight_hours % 1)*60)}M",
+            "stops": 0,
+            "price": first_price if has_first else econ_price,
+            "price_economy": econ_price,
+            "currency": "USD",
+            "cabin": cabin,
+            "distance_miles": round(distance),
+            "source": "mock",
+            "bookable": False
+        })
+
+    # Sort by departure time so the pool is ordered
+    flights.sort(key=lambda f: f['departure_time'])
+    return flights
 
 # ---------------------------------------------------------------------------
 # Southwest Airlines Data (Mock - Southwest has no public API/GDS presence)
@@ -376,7 +427,7 @@ def search_southwest_fares(origin_iata, dest_iata, departure_date=None):
       - Hub-based pricing advantages
     """
     if not departure_date:
-        departure_date = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
+        departure_date = datetime.now().strftime('%Y-%m-%d')
 
     distance = 0
     orig_data = next((v for v in AIRPORT_MAP.values() if v['iata'] == origin_iata), None)
@@ -427,31 +478,251 @@ def search_southwest_fares(origin_iata, dest_iata, departure_date=None):
     }
 
 # ---------------------------------------------------------------------------
-# Rideshare Cost Estimation (Uber / Lyft mock)
+# Rideshare Cost Estimation - Mapbox Directions + Published Rate Cards
 # ---------------------------------------------------------------------------
-def estimate_rideshare(origin_city, dest_airport, service="uber_black"):
-    """Estimate rideshare cost from address to airport."""
-    # Rough estimates based on typical metro distances
-    base_costs = {
-        "uber_black": {"base": 15, "per_mile": 4.50, "min": 45},
-        "uber_x":     {"base": 5,  "per_mile": 1.80, "min": 15},
-        "lyft_lux":   {"base": 12, "per_mile": 3.80, "min": 40},
-        "lyft_std":   {"base": 4,  "per_mile": 1.60, "min": 12},
+# Published industry rate cards (market averages, 2024-2025 data)
+# Source: Gridwise driver earnings reports, Ridester, TheRideshareGuy
+# Uber/Lyft do NOT have public price-estimate APIs - direct access requires
+# Uber BD approval and prohibits comparison use-cases. Mapbox Directions gives
+# us real road miles + minutes, then we apply these calibrated rate cards.
+# Fallback/Default rates
+RIDE_RATE_CARDS = {
+    "uber_x":     {"name": "UberX",      "provider": "Uber",  "base": 1.80, "per_mile": 1.18, "per_min": 0.18, "booking_fee": 2.75, "min_fare": 6.50,  "surge_cap": 3.0, "color": "#000000"},
+    "uber_black": {"name": "Uber Black", "provider": "Uber",  "base": 8.00, "per_mile": 3.75, "per_min": 0.55, "booking_fee": 2.75, "min_fare": 25.00, "surge_cap": 2.5, "color": "#1a1a1a"},
+    "uber_xl":    {"name": "UberXL",    "provider": "Uber",  "base": 3.50, "per_mile": 1.75, "per_min": 0.28, "booking_fee": 2.75, "min_fare": 9.00,  "surge_cap": 3.0, "color": "#276EF1"},
+    "lyft_std":   {"name": "Lyft",      "provider": "Lyft",  "base": 1.75, "per_mile": 1.15, "per_min": 0.17, "booking_fee": 2.50, "min_fare": 6.00,  "surge_cap": 3.0, "color": "#FF00BF"},
+    "lyft_lux":   {"name": "Lyft Lux",   "provider": "Lyft",  "base": 7.50, "per_mile": 3.50, "per_min": 0.50, "booking_fee": 2.50, "min_fare": 22.00, "surge_cap": 2.5, "color": "#8B00FF"},
+    "lyft_xl":    {"name": "Lyft XL",    "provider": "Lyft",  "base": 3.00, "per_mile": 1.65, "per_min": 0.25, "booking_fee": 2.50, "min_fare": 8.00,  "surge_cap": 3.0, "color": "#E91E8C"},
+}
+
+# City-specific overrides (Calibrated 2024-2025 market averages)
+# Source: Ridester, Gridwise, TheRideshareGuy, and NetCredit state studies.
+MARKET_RATE_OVERRIDES = {
+    "JFK": {"tier": "Premium Hub", "base": 3.00, "per_mile": 1.85, "per_min": 0.60, "booking": 3.50},
+    "LGA": {"tier": "Premium Hub", "base": 3.00, "per_mile": 1.85, "per_min": 0.60, "booking": 3.50},
+    "EWR": {"tier": "Premium Hub", "base": 3.00, "per_mile": 1.85, "per_min": 0.60, "booking": 3.50},
+    "ORD": {"tier": "Major Hub",   "base": 2.15, "per_mile": 1.25, "per_min": 0.25, "booking": 2.85},
+    "MDW": {"tier": "Major Hub",   "base": 2.15, "per_mile": 1.25, "per_min": 0.25, "booking": 2.85},
+    "LAX": {"tier": "High Demand", "base": 1.65, "per_mile": 1.05, "per_min": 0.35, "booking": 2.60},
+    "SFO": {"tier": "Premium Hub", "base": 2.50, "per_mile": 1.60, "per_min": 0.50, "booking": 3.10},
+    "SEA": {"tier": "High Cost",   "base": 2.50, "per_mile": 1.55, "per_min": 0.55, "booking": 3.00},
+    "MIA": {"tier": "Seasonal",    "base": 1.50, "per_mile": 1.25, "per_min": 0.22, "booking": 2.50},
+    "DFW": {"tier": "Major Hub",   "base": 1.60, "per_mile": 1.15, "per_min": 0.22, "booking": 2.55},
+    "DCA": {"tier": "Capitol Hub", "base": 1.45, "per_mile": 1.15, "per_min": 0.35, "booking": 2.90},
+    "IAD": {"tier": "Capitol Hub", "base": 1.45, "per_mile": 1.15, "per_min": 0.35, "booking": 2.90},
+    "ATL": {"tier": "Hub City",    "base": 1.30, "per_mile": 1.10, "per_min": 0.20, "booking": 2.40},
+}
+
+def get_market_rates(iata, service_type):
+    """
+    Returns the specific rates for a service type in a specific market.
+    Applies multipliers for premium tiers (Uber Black, Lyft Lux).
+    """
+    market = MARKET_RATE_OVERRIDES.get(iata.upper())
+    base_card = RIDE_RATE_CARDS.get(service_type, RIDE_RATE_CARDS["uber_x"])
+    
+    # Defaults
+    rates = {
+        "base": base_card["base"],
+        "per_mile": base_card["per_mile"],
+        "per_min": base_card["per_min"],
+        "booking_fee": base_card["booking_fee"],
+        "tier": "Standard Market"
     }
-    config = base_costs.get(service, base_costs["uber_black"])
-    # Assume 10-25 miles to airport
-    est_miles = random.uniform(10, 25)
-    cost = max(config["min"], config["base"] + config["per_mile"] * est_miles)
-    surge = random.choice([1.0, 1.0, 1.0, 1.2, 1.5])  # 20% chance of surge
+
+    if market:
+        # Scale based on market base prices (using UberX as the baseline)
+        rates["tier"] = market["tier"]
+        
+        # Apply market overrides to standard tiers
+        if service_type in ["uber_x", "lyft_std"]:
+            rates["base"] = market["base"]
+            rates["per_mile"] = market["per_mile"]
+            rates["per_min"] = market["per_min"]
+            rates["booking_fee"] = market["booking"]
+        else:
+            # For Premium tiers (Black/Lux), we apply the market cost factor (e.g. JFK is ~1.5x more expensive)
+            # Factor = Market Mile / Global Default Mile
+            multiplier = market["per_mile"] / 1.18 
+            rates["base"] = base_card["base"] * (1.0 + (multiplier - 1.0) * 0.5) # Dampen base increase slightly
+            rates["per_mile"] = base_card["per_mile"] * multiplier
+            rates["per_min"] = base_card["per_min"] * multiplier
+            rates["booking_fee"] = market["booking"]
+
+    return rates
+
+MAPBOX_TOKEN = os.environ.get('MAPBOX_ACCESS_TOKEN', '')
+
+def _get_mapbox_route(origin_lon, origin_lat, dest_lon, dest_lat):
+    """
+    Query Mapbox Directions API for real driving distance (miles) and duration (minutes).
+    Returns (miles, minutes, source_label) or falls back to haversine estimate.
+    """
+    if not MAPBOX_TOKEN:
+        return None, None, "haversine"
+    try:
+        coords = f"{origin_lon},{origin_lat};{dest_lon},{dest_lat}"
+        url = (
+            f"https://api.mapbox.com/directions/v5/mapbox/driving/{coords}"
+            f"?geometries=geojson&overview=simplified&access_token={MAPBOX_TOKEN}"
+        )
+        resp = requests.get(url, timeout=8)
+        if resp.status_code == 200:
+            data = resp.json()
+            routes = data.get("routes", [])
+            if routes:
+                route = routes[0]
+                meters = route.get("distance", 0)      # meters
+                seconds = route.get("duration", 0)     # seconds
+                miles = meters * 0.000621371
+                minutes = seconds / 60.0
+                print(f"[Mapbox Directions] {round(miles, 1)} mi / {round(minutes, 0)} min (driving)")
+                return miles, minutes, "mapbox_directions"
+        print(f"[Mapbox Directions] Non-200 response: {resp.status_code}")
+    except Exception as e:
+        print(f"[Mapbox Directions] Error: {e}")
+    return None, None, "haversine"
+
+def estimate_rideshare(origin_city, dest_airport_iata, service="uber_black",
+                       origin_lon=None, origin_lat=None, airport_lon=None, airport_lat=None):
+    """
+    Estimate rideshare cost using Mapbox Directions for real road distance/time,
+    then apply published Uber/Lyft rate cards.
+    Returns all four service tiers if no specific service is requested.
+    """
+    card = RIDE_RATE_CARDS.get(service, RIDE_RATE_CARDS["uber_black"])
+
+    # --- Resolve coordinates if not supplied ---
+    # origin coords come from the caller when available (geocoded address)
+    # airport coords come from our AIRPORT_MAP
+    airport_data = next((v for v in AIRPORT_MAP.values() if v['iata'] == dest_airport_iata), None)
+    if airport_data:
+        airport_lon = airport_data['lon']
+        airport_lat = airport_data['lat']
+
+    # --- Try Mapbox Directions for real driving distance ---
+    drive_miles, drive_minutes, data_source = None, None, "estimated"
+
+    if origin_lon and origin_lat and airport_lon and airport_lat:
+        drive_miles, drive_minutes, data_source = _get_mapbox_route(
+            origin_lon, origin_lat, airport_lon, airport_lat
+        )
+
+    # --- Haversine fallback ---
+    if drive_miles is None:
+        if airport_data and origin_lat and origin_lon:
+            straight_miles = haversine_miles(origin_lat, origin_lon, airport_lat, airport_lon)
+            drive_miles = straight_miles * 1.35   # 35% road-factor over straight-line
+            drive_minutes = drive_miles / 25 * 60  # Assume 25 mph avg urban speed
+        else:
+            # Last-resort: city-class estimate
+            drive_miles = 14.0
+            drive_minutes = 28.0
+        data_source = "estimated (haversine+road-factor)"
+
+    # --- Apply market-specific rate card ---
+    card = RIDE_RATE_CARDS.get(service, RIDE_RATE_CARDS["uber_black"])
+    rates = get_market_rates(dest_airport_iata, service)
+
+    raw_cost = rates["base"] + (rates["per_mile"] * drive_miles) + (rates["per_min"] * drive_minutes) + rates["booking_fee"]
+    raw_cost = max(card["min_fare"], raw_cost)
+
+    # Time-of-day surge heuristic (morning/evening rush more likely)
+    hour = datetime.now().hour
+    is_peak = (7 <= hour <= 9) or (16 <= hour <= 19)
+    surge = round(random.uniform(1.1, 1.4) if is_peak else random.uniform(1.0, 1.15), 2)
+    surge = min(surge, card["surge_cap"])
+
+    total = round(raw_cost * surge, 2)
+
     return {
-        "service": service.replace("_", " ").title(),
-        "provider": "Uber" if "uber" in service else "Lyft",
-        "estimated_cost": round(cost * surge, 2),
-        "surge_multiplier": surge,
-        "estimated_miles": round(est_miles, 1),
-        "estimated_minutes": round(est_miles * 2.5 + random.randint(5, 15)),
+        "service": card["name"],
+        "provider": card["provider"],
+        "color": card["color"],
+        "estimated_cost": total,
+        "market_tier": rates["tier"],
+        "cost_breakdown": {
+            "base_fare": round(rates["base"], 2),
+            "distance_charge": round(rates["per_mile"] * drive_miles, 2),
+            "time_charge": round(rates["per_min"] * drive_minutes, 2),
+            "booking_fee": rates["booking_fee"],
+            "surge_multiplier": surge,
+        },
+        "estimated_miles": round(drive_miles, 1),
+        "estimated_minutes": round(drive_minutes),
+        "is_peak_hour": is_peak,
+        "data_source": data_source,
+        "rate_card_source": "City-Calibrated Market Averages (2024-2025)",
         "currency": "USD"
     }
+
+def estimate_all_rideshare_tiers(origin_city, dest_airport_iata,
+                                  origin_lon=None, origin_lat=None):
+    """
+    Compute all six service tiers in one Mapbox call (reuse the route data).
+    Returns a dict keyed by service name.
+    """
+    airport_data = next((v for v in AIRPORT_MAP.values() if v['iata'] == dest_airport_iata), None)
+    airport_lon = airport_data['lon'] if airport_data else None
+    airport_lat = airport_data['lat'] if airport_data else None
+
+    # Single Mapbox call shared across all tiers
+    drive_miles, drive_minutes, data_source = None, None, "estimated"
+    if origin_lon and origin_lat and airport_lon and airport_lat:
+        drive_miles, drive_minutes, data_source = _get_mapbox_route(
+            origin_lon, origin_lat, airport_lon, airport_lat
+        )
+
+    if drive_miles is None:
+        if airport_data and origin_lat and origin_lon:
+            straight_miles = haversine_miles(origin_lat, origin_lon, airport_lat, airport_lon)
+            drive_miles = straight_miles * 1.35
+            drive_minutes = drive_miles / 25 * 60
+        else:
+            drive_miles, drive_minutes = 14.0, 28.0
+        data_source = "estimated (haversine+road-factor)"
+
+    hour = datetime.now().hour
+    is_peak = (7 <= hour <= 9) or (16 <= hour <= 19)
+
+    results = {}
+    market_tier = "Standard Market"
+
+    for key, card in RIDE_RATE_CARDS.items():
+        rates = get_market_rates(dest_airport_iata, key)
+        market_tier = rates["tier"] # Stays same across items for this batch
+
+        raw = rates["base"] + (rates["per_mile"] * drive_miles) + (rates["per_min"] * drive_minutes) + rates["booking_fee"]
+        raw = max(card["min_fare"], raw)
+        
+        surge = round(random.uniform(1.1, 1.4) if is_peak else random.uniform(1.0, 1.15), 2)
+        surge = min(surge, card["surge_cap"])
+        
+        results[key] = {
+            "service": card["name"],
+            "provider": card["provider"],
+            "color": card["color"],
+            "estimated_cost": round(raw * surge, 2),
+            "market_tier": rates["tier"],
+            "cost_breakdown": {
+                "base_fare": round(rates["base"], 2),
+                "distance_charge": round(rates["per_mile"] * drive_miles, 2),
+                "time_charge": round(rates["per_min"] * drive_minutes, 2),
+                "booking_fee": rates["booking_fee"],
+                "surge_multiplier": surge,
+            },
+            "estimated_miles": round(drive_miles, 1),
+            "estimated_minutes": round(drive_minutes),
+            "is_peak_hour": is_peak,
+            "currency": "USD",
+        }
+    results["_meta"] = {
+        "data_source": data_source,
+        "market_tier": market_tier,
+        "rate_card_source": "City-Calibrated Market Averages (2024-2025)",
+        "note": "Uber/Lyft prices are simulated using real road distances + city-specific rate cards."
+    }
+    return results
 
 # ---------------------------------------------------------------------------
 # Concierge / Handling Fee
@@ -585,11 +856,46 @@ def api_route():
     """
     Full logistics route breakdown for JetSlice delivery.
     Returns: pickup rideshare + flight + dropoff rideshare + concierge fee + total.
+    Optional: origin_lon, origin_lat, dest_lon, dest_lat for precise Mapbox routing.
     """
     origin = request.args.get('origin', '').strip()
     destination = request.args.get('destination', '').strip()
     cargo = request.args.get('cargo', 'heated').lower()
     date = request.args.get('date', None)
+
+    # Optional precise coordinates (passed by frontend after geocoding)
+    try:
+        origin_lon = float(request.args.get('origin_lon', ''))
+        origin_lat = float(request.args.get('origin_lat', ''))
+    except (ValueError, TypeError):
+        origin_lon, origin_lat = None, None
+
+    try:
+        dest_lon = float(request.args.get('dest_lon', ''))
+        dest_lat = float(request.args.get('dest_lat', ''))
+    except (ValueError, TypeError):
+        dest_lon, dest_lat = None, None
+
+    # Restaurant / Procurement data
+    try:
+        rest_lon = float(request.args.get('rest_lon', ''))
+        rest_lat = float(request.args.get('rest_lat', ''))
+    except (ValueError, TypeError):
+        rest_lon, rest_lat = None, None
+    rest_name = request.args.get('rest_name', 'Target Restaurant').strip()
+
+    from restaurant_scraper import scrape_restaurant_hours
+    rest_hours_data = scrape_restaurant_hours(rest_name, origin)
+
+    # Courier Start (Home) - assume home is near the restaurant if not provided
+    if rest_lon and rest_lat:
+        courier_lon = rest_lon + random.uniform(-0.05, 0.05)
+        courier_lat = rest_lat + random.uniform(-0.05, 0.05)
+    elif origin_lon and origin_lat:
+        courier_lon = origin_lon + random.uniform(-0.05, 0.05)
+        courier_lat = origin_lat + random.uniform(-0.05, 0.05)
+    else:
+        courier_lon, courier_lat = None, None
 
     if not origin or not destination:
         return jsonify({"error": "Missing 'origin' and 'destination'"}), 400
@@ -614,48 +920,190 @@ def api_route():
             "message": "Local delivery route activated via terrestrial fleet."
         }), 200
 
-    # 1. Pickup rideshare
-    pickup = estimate_rideshare(origin, orig_airport['iata'], "uber_black")
+    # -----------------------------------------------------------------------
+    # LEG 1: Courier Home -> Restaurant (UberX)
+    # -----------------------------------------------------------------------
+    leg1_est = estimate_rideshare("Origin City", orig_airport['iata'], "uber_x",
+                                  origin_lon=courier_lon, origin_lat=courier_lat,
+                                  airport_lon=rest_lon, airport_lat=rest_lat)
+    
+    # -----------------------------------------------------------------------
+    # LEG 2: Restaurant -> Origin Airport (UberX)
+    # -----------------------------------------------------------------------
+    leg2_est = estimate_rideshare("Origin City", orig_airport['iata'], "uber_x",
+                                  origin_lon=rest_lon, origin_lat=rest_lat)
 
-    # 2. Flight options
+    # 2. Flight options - search ALL carriers
     gds_flights = search_gds_flights(orig_airport['iata'], dest_airport['iata'], date)
     southwest = search_southwest_fares(orig_airport['iata'], dest_airport['iata'], date)
 
-    # Filter flights for TSA Clearance & Prep (Prep + Uber + 2-3 hours)
-    from datetime import datetime, timedelta
+    # Merge Southwest into the unified flight pool if available
+    all_flights = list(gds_flights)  # copy
+    if isinstance(southwest, dict) and southwest.get('available'):
+        # Normalize Southwest into the same flight record format
+        sw_econ = southwest['fares']['wanna_get_away']
+        sw_biz = southwest['fares']['business_select']
+        sw_flight = {
+            "airline": "Southwest Airlines",
+            "carrier_code": "WN",
+            "code": "WN",
+            "color": "#E24726",
+            "flight_number": southwest['flight_number'],
+            "flightNum": southwest['flight_number'],
+            "origin": southwest['origin'],
+            "destination": southwest['destination'],
+            "departure_time": southwest['departure_time'],
+            "arrival_time": southwest.get('arrival_time', southwest['departure_time']),
+            "duration": southwest['duration'],
+            "stops": southwest.get('stops', 0),
+            "price": round(sw_biz, 2),         # Business Select as "premium" price
+            "price_economy": round(sw_econ, 2), # Wanna Get Away as economy
+            "currency": "USD",
+            "cabin": "Business Select",
+            "distance_miles": southwest.get('distance_miles', 0),
+            "source": southwest.get('source', 'estimated'),
+            "bookable": False,
+            "perks": southwest.get('perks', []),
+        }
+        # Southwest mock doesn't include arrival_time — compute it from departure + duration
+        if sw_flight['arrival_time'] == sw_flight['departure_time']:
+            try:
+                dep_dt = datetime.strptime(sw_flight['departure_time'], '%Y-%m-%dT%H:%M:%S')
+                flight_hrs = max(2, southwest.get('distance_miles', 800) / 480)
+                arr_dt = dep_dt + timedelta(hours=flight_hrs)
+                sw_flight['arrival_time'] = arr_dt.strftime('%Y-%m-%dT%H:%M:%S')
+            except Exception:
+                pass
+        all_flights.append(sw_flight)
+
+    # Filter flights for TSA Clearance & Prep
     valid_flights = []
-    
-    # 30m prep + uber transit + 2.5 hour TSA/Terminal queue
-    buffer_minutes = 30 + pickup['estimated_minutes'] + 150
+    # Total time to get to airport: Home -> Rest -> Airport + 120min (2 hr TSA load) buffer
+    buffer_minutes = leg1_est['estimated_minutes'] + 30 + leg2_est['estimated_minutes'] + 120 
     now = datetime.now()
     minimum_departure_time = now + timedelta(minutes=buffer_minutes)
 
-    for flight in gds_flights:
+    for flight in all_flights:
         try:
             dep_time = datetime.fromisoformat(flight['departure_time'].replace('Z', '+00:00'))
-            # If flight is today, ensure it passes TSA buffer. If tomorrow, it's valid.
             if dep_time.timestamp() > minimum_departure_time.timestamp():
                 valid_flights.append(flight)
         except Exception:
-            valid_flights.append(flight) # Fallback
+            valid_flights.append(flight)
 
-    # Pick best option (first class for premium service)
-    best_flight = valid_flights[0] if valid_flights else (gds_flights[0] if gds_flights else None)
-    flight_cost = best_flight['price'] if best_flight else 0
+    # If no valid flights today, search tomorrow
+    if not valid_flights and (not date):
+        tomorrow = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
+        print(f"[JetSlice] No valid flights today after {minimum_departure_time.strftime('%I:%M %p')}, searching tomorrow ({tomorrow})")
+        gds_flights = search_gds_flights(orig_airport['iata'], dest_airport['iata'], tomorrow)
+        southwest = search_southwest_fares(orig_airport['iata'], dest_airport['iata'], tomorrow)
+        for flight in gds_flights:
+            try:
+                dep_time = datetime.fromisoformat(flight['departure_time'].replace('Z', '+00:00'))
+                if dep_time.timestamp() > minimum_departure_time.timestamp():
+                    valid_flights.append(flight)
+            except Exception:
+                valid_flights.append(flight)
+        # Also include tomorrow's Southwest
+        if isinstance(southwest, dict) and southwest.get('available'):
+            sw_econ = southwest['fares']['wanna_get_away']
+            sw_biz = southwest['fares']['business_select']
+            tmrw_sw = {
+                "airline": "Southwest Airlines", "carrier_code": "WN", "code": "WN",
+                "color": "#E24726", "flight_number": southwest['flight_number'],
+                "flightNum": southwest['flight_number'],
+                "origin": southwest['origin'], "destination": southwest['destination'],
+                "departure_time": southwest['departure_time'],
+                "arrival_time": southwest.get('arrival_time', southwest['departure_time']),
+                "duration": southwest['duration'], "stops": southwest.get('stops', 0),
+                "price": round(sw_biz, 2), "price_economy": round(sw_econ, 2),
+                "currency": "USD", "cabin": "Business Select",
+                "source": southwest.get('source', 'estimated'), "bookable": False,
+            }
+            valid_flights.append(tmrw_sw)
 
-    # Southwest comparison price
+    # --- Sort by SOONEST departure to pick the earliest available flight ---
+    def _parse_dep(f):
+        try:
+            return datetime.fromisoformat(f['departure_time'].replace('Z', '+00:00')).timestamp()
+        except Exception:
+            return float('inf')
+    valid_flights.sort(key=_parse_dep)
+
+    best_flight = valid_flights[0] if valid_flights else (all_flights[0] if all_flights else None)
+    # Use the cheapest fare available (economy/budget when present) instead of first class
+    flight_cost = best_flight.get('price_economy', best_flight.get('price', 0)) if best_flight else 0
+    print(f"[JetSlice] Best flight selected: {best_flight['airline']} {best_flight['flight_number']} departing {best_flight['departure_time']} @ ${flight_cost}" if best_flight else "[JetSlice] No flights found")
+
     sw_price = None
     if isinstance(southwest, dict) and southwest.get('available'):
         sw_price = southwest['fares']['business_select']
 
-    # 3. Dropoff rideshare
-    dropoff = estimate_rideshare(destination, dest_airport['iata'], "lyft_lux")
+    # -----------------------------------------------------------------------
+    # LEG 4: Dest Airport -> Customer Destination (UberX)
+    # -----------------------------------------------------------------------
+    leg4_tiers = estimate_all_rideshare_tiers(
+        destination, dest_airport['iata'],
+        origin_lon=dest_lon, origin_lat=dest_lat
+    )
+    leg4_est = leg4_tiers.get("uber_x", {})
+
+    # -----------------------------------------------------------------------
+    # LEG 5: Customer -> Dest Airport (Return Trip - UberX)
+    # -----------------------------------------------------------------------
+    leg5_est = estimate_rideshare("Dest City", dest_airport['iata'], "uber_x",
+                                  origin_lon=dest_lon, origin_lat=dest_lat)
+
+    # -----------------------------------------------------------------------
+    # LEG 6: Return Flight (Dest -> Origin)
+    # -----------------------------------------------------------------------
+    return_flights = search_gds_flights(dest_airport['iata'], orig_airport['iata'], date)
+    best_return = return_flights[0] if return_flights else best_flight
+    return_cost = best_return.get('price_economy', best_return.get('price', flight_cost)) if best_return else flight_cost
+
+    # -----------------------------------------------------------------------
+    # LEG 7: Origin Airport -> Courier Home (Final Ride - UberX)
+    # -----------------------------------------------------------------------
+    leg7_est = estimate_rideshare("Origin City", orig_airport['iata'], "uber_x",
+                                  origin_lon=courier_lon, origin_lat=courier_lat)
 
     # 4. Concierge handling
     concierge = calculate_concierge_fee(cargo, distance)
 
-    # Total
-    total = pickup['estimated_cost'] + flight_cost + dropoff['estimated_cost'] + concierge['fee']
+    # 5. Labor and Platform Fees
+    flight_minutes = round(distance / 500 * 60)
+    total_courier_minutes = (
+        leg1_est.get('estimated_minutes', 30) +
+        30 + # Procurement at restaurant
+        leg2_est.get('estimated_minutes', 30) +
+        90 + # Origin airport wait
+        flight_minutes + 
+        15 + # Dest airport package retrieval
+        leg4_est.get('estimated_minutes', 30) +
+        leg5_est.get('estimated_minutes', 30) + # Customer to airport
+        90 + # Return airport wait
+        flight_minutes +
+        15 + # Return airport luggage retrieval
+        leg7_est.get('estimated_minutes', 30)
+    )
+    
+    courier_labor_cost = (total_courier_minutes / 60.0) * 50.0
+
+    # Base cost of all operations
+    subtotal = (
+        leg1_est['estimated_cost'] + 
+        leg2_est['estimated_cost'] + 
+        flight_cost + 
+        leg4_est['estimated_cost'] + 
+        leg5_est['estimated_cost'] + 
+        return_cost + 
+        leg7_est['estimated_cost'] + 
+        concierge['fee'] +
+        courier_labor_cost
+    )
+
+    jetslice_fee = subtotal * 0.20
+    total = subtotal + jetslice_fee
 
     return jsonify({
         "route": {
@@ -667,50 +1115,155 @@ def api_route():
             {
                 "step": 1,
                 "type": "rideshare",
-                "label": f"{pickup['service']} to {orig_airport['iata']}",
-                "provider": pickup['provider'],
-                "service": pickup['service'],
-                "cost": pickup['estimated_cost'],
-                "duration_minutes": pickup['estimated_minutes'],
+                "label": f"Courier to {rest_name}",
+                "provider": leg1_est['provider'],
+                "service": leg1_est['service'],
+                "cost": leg1_est['estimated_cost'],
+                "duration_minutes": leg1_est['estimated_minutes'],
                 "icon": "car-sport"
             },
             {
                 "step": 2,
-                "type": "flight",
-                "label": f"United Airlines {best_flight['flight_number']}" if best_flight else "No flight found",
-                "provider": "United Airlines",
-                "flight": best_flight,
-                "cost": flight_cost,
-                "southwest_alternative": sw_price,
-                "icon": "airplane"
+                "type": "procurement",
+                "label": f"Procurement at {rest_name}",
+                "provider": rest_name,
+                "cost": 0,
+                "duration_minutes": 30,
+                "icon": "restaurant",
+                "procurement_status": rest_hours_data
             },
             {
                 "step": 3,
                 "type": "rideshare",
-                "label": f"{dropoff['service']} to destination",
-                "provider": dropoff['provider'],
-                "service": dropoff['service'],
-                "cost": dropoff['estimated_cost'],
-                "duration_minutes": dropoff['estimated_minutes'],
-                "icon": "car"
+                "label": f"Procurement to {orig_airport['iata']}",
+                "provider": leg2_est['provider'],
+                "service": leg2_est['service'],
+                "cost": leg2_est['estimated_cost'],
+                "duration_minutes": leg2_est['estimated_minutes'],
+                "icon": "car-sport"
             },
             {
                 "step": 4,
+                "type": "flight",
+                "label": f"{best_flight['airline']} {best_flight['flight_number']}" if best_flight else "No flight found",
+                "provider": best_flight['airline'] if best_flight else "N/A",
+                "flight": best_flight,
+                "cost": flight_cost,
+                "icon": "airplane"
+            },
+            {
+                "step": 5,
+                "type": "rideshare",
+                "label": f"Delivery to Customer",
+                "provider": leg4_est['provider'],
+                "service": leg4_est['service'],
+                "cost": leg4_est['estimated_cost'],
+                "duration_minutes": leg4_est['estimated_minutes'],
+                "icon": "car"
+            },
+            {
+                "step": 6,
+                "type": "return",
+                "label": "Courier Return Journey",
+                "provider": "JetSlice Operations",
+                "cost": round(leg5_est['estimated_cost'] + return_cost + leg7_est['estimated_cost'], 2),
+                "includes": [
+                    f"Return Ride: ${leg5_est['estimated_cost']}",
+                    f"Return Flight: ${return_cost}",
+                    f"Ride Home: ${leg7_est['estimated_cost']}"
+                ],
+                "icon": "refresh-circle"
+            },
+            {
+                "step": 7,
                 "type": "concierge",
                 "label": concierge['description'],
                 "provider": "JetSlice",
                 "cost": concierge['fee'],
                 "includes": concierge['includes'],
                 "icon": "briefcase"
+            },
+            {
+                "step": 8,
+                "type": "labor",
+                "label": "Courier Labor",
+                "provider": "JetSlice Operator",
+                "cost": round(courier_labor_cost, 2),
+                "duration_minutes": total_courier_minutes,
+                "icon": "person"
+            },
+            {
+                "step": 9,
+                "type": "fee",
+                "label": "JetSlice Platform Fee",
+                "provider": "JetSlice",
+                "cost": round(jetslice_fee, 2),
+                "icon": "star"
             }
         ],
-        "flights": gds_flights,
+        "flights": all_flights,
         "total_cost": round(total, 2),
         "currency": "USD",
         "data_source": "serpapi_live" if SERPAPI_KEY else "amadeus_live" if amadeus_client else "mock",
         "timestamp": datetime.utcnow().isoformat() + "Z"
     })
 
+
+@app.route('/api/rideshare', methods=['GET'])
+def api_rideshare():
+    """
+    Direct rideshare cost estimator endpoint.
+    Query params:
+      - origin: city name or address string
+      - airport: IATA code (e.g. ORD) OR resolved from origin if omitted
+      - origin_lon, origin_lat: optional precise coordinates for the pickup point
+      - service: uber_x | uber_black | uber_xl | lyft_std | lyft_lux | lyft_xl | all (default: all)
+    Returns real road distance (Mapbox Directions) + rate-card pricing for each tier.
+    Note: Uber/Lyft have no public price APIs. Road distance is live; rates are
+          calibrated 2024-2025 market averages from Gridwise / TheRideshareGuy.
+    """
+    origin = request.args.get('origin', '').strip()
+    airport_iata = request.args.get('airport', '').strip().upper()
+    service = request.args.get('service', 'all').strip().lower()
+
+    try:
+        origin_lon = float(request.args.get('origin_lon', ''))
+        origin_lat = float(request.args.get('origin_lat', ''))
+    except (ValueError, TypeError):
+        origin_lon, origin_lat = None, None
+
+    if not origin and not airport_iata:
+        return jsonify({"error": "Provide at least 'origin' or 'airport'"}), 400
+
+    # Resolve airport if not given
+    if not airport_iata:
+        resolved = resolve_airport(origin)
+        airport_iata = resolved['iata'] if resolved else None
+    if not airport_iata:
+        return jsonify({"error": f"Could not resolve airport for: {origin}"}), 400
+
+    if service == 'all':
+        result = estimate_all_rideshare_tiers(origin, airport_iata,
+                                               origin_lon=origin_lon, origin_lat=origin_lat)
+        tiers = {k: v for k, v in result.items() if k != '_meta'}
+        return jsonify({
+            "origin": origin,
+            "airport": airport_iata,
+            "tiers": tiers,
+            "meta": result.get('_meta', {}),
+            "timestamp": datetime.utcnow().isoformat() + "Z"
+        })
+    else:
+        if service not in RIDE_RATE_CARDS:
+            return jsonify({"error": f"Unknown service '{service}'. Valid: {list(RIDE_RATE_CARDS.keys())} or 'all'"}), 400
+        result = estimate_rideshare(origin, airport_iata, service,
+                                    origin_lon=origin_lon, origin_lat=origin_lat)
+        return jsonify({
+            "origin": origin,
+            "airport": airport_iata,
+            "estimate": result,
+            "timestamp": datetime.utcnow().isoformat() + "Z"
+        })
 
 # ---------------------------------------------------------------------------
 # Spotify Integration (optional - gracefully degrades)

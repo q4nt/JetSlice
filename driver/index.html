@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>JetSlice Driver - Courier Portal</title>
+<link href="style.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<!-- Ionicons -->
+<script src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js" type="module"></script>
+<script nomodule="" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+</head>
+<body>
+<!-- ====== DRIVER APP - iPhone Mockup ====== -->
+<div class="iphone-mockup">
+<div class="dynamic-island"></div>
+<div class="app-container">
+
+<!-- ====== SCREEN 1: DASHBOARD (Home) ====== -->
+<section class="screen active" id="dashboard-screen">
+    <header class="app-header">
+        <div class="header-left">
+            <h2>JetSlice</h2>
+            <span class="driver-badge">COURIER</span>
+        </div>
+        <div class="header-right">
+            <div class="online-toggle" id="onlineToggle" onclick="driver.toggleOnline()">
+                <div class="toggle-track">
+                    <div class="toggle-thumb"></div>
+                </div>
+                <span class="toggle-label">Offline</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Status Bar -->
+    <div class="driver-status-bar" id="statusBar">
+        <div class="status-pulse"></div>
+        <span>You're offline</span>
+    </div>
+
+    <!-- Stats Overview -->
+    <div class="driver-stats">
+        <div class="stat-card highlight">
+            <ion-icon name="cash-outline"></ion-icon>
+            <span class="stat-value" id="todayEarnings">$0</span>
+            <span class="stat-label">Today</span>
+        </div>
+        <div class="stat-card">
+            <ion-icon name="airplane-outline"></ion-icon>
+            <span class="stat-value" id="deliveryCount">0</span>
+            <span class="stat-label">Deliveries</span>
+        </div>
+        <div class="stat-card">
+            <ion-icon name="star"></ion-icon>
+            <span class="stat-value" id="driverRating">5.0</span>
+            <span class="stat-label">Rating</span>
+        </div>
+    </div>
+
+    <!-- Active Delivery Card (hidden by default) -->
+    <div class="active-delivery-card hidden" id="activeDeliveryCard">
+        <div class="adc-header">
+            <div class="adc-badge">ACTIVE</div>
+            <span class="adc-timer" id="activeTimer">00:00</span>
+        </div>
+        <div class="adc-route">
+            <div class="adc-point">
+                <div class="adc-dot pickup"></div>
+                <div class="adc-info">
+                    <span class="adc-label">PICKUP</span>
+                    <span class="adc-addr" id="activePickup">Joe's Stone Crab</span>
+                </div>
+            </div>
+            <div class="adc-line"></div>
+            <div class="adc-point">
+                <div class="adc-dot dropoff"></div>
+                <div class="adc-info">
+                    <span class="adc-label">DROPOFF</span>
+                    <span class="adc-addr" id="activeDropoff">ORD Terminal 3</span>
+                </div>
+            </div>
+        </div>
+        <div class="adc-footer">
+            <span class="adc-pay" id="activePay">$85</span>
+            <button class="adc-nav-btn" onclick="driver.openNavigation()">
+                <ion-icon name="navigate"></ion-icon> Navigate
+            </button>
+        </div>
+    </div>
+
+    <!-- Incoming Orders Section -->
+    <div class="section-header">
+        <h3>Incoming Requests</h3>
+        <span class="badge-count" id="requestCount">0</span>
+    </div>
+    <div class="order-feed" id="orderFeed">
+        <div class="empty-feed" id="emptyFeed">
+            <ion-icon name="notifications-off-outline"></ion-icon>
+            <p>No requests yet</p>
+            <span>Go online to receive delivery requests</span>
+        </div>
+    </div>
+
+</section>
+
+<!-- ====== SCREEN 2: MY DELIVERIES ====== -->
+<section class="screen" id="deliveries-screen">
+    <header class="screen-header">
+        <h2>My Deliveries</h2>
+    </header>
+    <div class="screen-scroll">
+        <!-- Active/Upcoming -->
+        <div class="section-header">
+            <h3>In Progress</h3>
+        </div>
+        <div id="activeDeliveries" class="deliveries-list">
+            <div class="empty-state-small">
+                <ion-icon name="cube-outline"></ion-icon>
+                <span>No active deliveries</span>
+            </div>
+        </div>
+
+        <!-- Completed -->
+        <div class="section-header" style="margin-top: 24px;">
+            <h3>Completed</h3>
+        </div>
+        <div id="completedDeliveries" class="deliveries-list">
+            <!-- Hardcoded past deliveries for demo -->
+            <div class="delivery-history-card">
+                <div class="dhc-left">
+                    <div class="dhc-icon"><ion-icon name="checkmark-circle"></ion-icon></div>
+                    <div class="dhc-info">
+                        <span class="dhc-route">MIA &rarr; ORD</span>
+                        <span class="dhc-detail">Joe's Stone Crab &bull; Apr 16</span>
+                    </div>
+                </div>
+                <div class="dhc-right">
+                    <span class="dhc-pay">+$127</span>
+                    <span class="dhc-rating"><ion-icon name="star"></ion-icon> 5.0</span>
+                </div>
+            </div>
+            <div class="delivery-history-card">
+                <div class="dhc-left">
+                    <div class="dhc-icon"><ion-icon name="checkmark-circle"></ion-icon></div>
+                    <div class="dhc-info">
+                        <span class="dhc-route">EWR &rarr; ORD</span>
+                        <span class="dhc-detail">Peter Luger &bull; Apr 15</span>
+                    </div>
+                </div>
+                <div class="dhc-right">
+                    <span class="dhc-pay">+$142</span>
+                    <span class="dhc-rating"><ion-icon name="star"></ion-icon> 5.0</span>
+                </div>
+            </div>
+            <div class="delivery-history-card">
+                <div class="dhc-left">
+                    <div class="dhc-icon"><ion-icon name="checkmark-circle"></ion-icon></div>
+                    <div class="dhc-info">
+                        <span class="dhc-route">LAX &rarr; ORD</span>
+                        <span class="dhc-detail">Nobu Malibu &bull; Apr 14</span>
+                    </div>
+                </div>
+                <div class="dhc-right">
+                    <span class="dhc-pay">+$168</span>
+                    <span class="dhc-rating"><ion-icon name="star"></ion-icon> 4.9</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ====== SCREEN 3: EARNINGS ====== -->
+<section class="screen" id="earnings-screen">
+    <header class="screen-header">
+        <h2>Earnings</h2>
+    </header>
+    <div class="screen-scroll">
+        <!-- Big Earnings Card -->
+        <div class="earnings-hero">
+            <span class="earnings-period">This Week</span>
+            <span class="earnings-total" id="weekTotal">$437</span>
+            <div class="earnings-bar-chart">
+                <div class="bar-day">
+                    <div class="bar" style="height: 30%;"></div>
+                    <span>M</span>
+                </div>
+                <div class="bar-day">
+                    <div class="bar" style="height: 55%;"></div>
+                    <span>T</span>
+                </div>
+                <div class="bar-day">
+                    <div class="bar" style="height: 80%;"></div>
+                    <span>W</span>
+                </div>
+                <div class="bar-day">
+                    <div class="bar active" style="height: 65%;"></div>
+                    <span>T</span>
+                </div>
+                <div class="bar-day">
+                    <div class="bar" style="height: 0%;"></div>
+                    <span>F</span>
+                </div>
+                <div class="bar-day">
+                    <div class="bar" style="height: 0%;"></div>
+                    <span>S</span>
+                </div>
+                <div class="bar-day">
+                    <div class="bar" style="height: 0%;"></div>
+                    <span>S</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Breakdown -->
+        <div class="earnings-breakdown">
+            <div class="eb-row">
+                <span class="eb-label"><ion-icon name="car-outline"></ion-icon> Base Fares</span>
+                <span class="eb-value">$312</span>
+            </div>
+            <div class="eb-row">
+                <span class="eb-label"><ion-icon name="flame-outline"></ion-icon> Surge Bonuses</span>
+                <span class="eb-value accent">+$65</span>
+            </div>
+            <div class="eb-row">
+                <span class="eb-label"><ion-icon name="star-outline"></ion-icon> Tips</span>
+                <span class="eb-value accent">+$60</span>
+            </div>
+            <div class="eb-row total">
+                <span class="eb-label">Total</span>
+                <span class="eb-value">$437</span>
+            </div>
+        </div>
+
+        <!-- Payout -->
+        <div class="payout-card">
+            <div class="payout-left">
+                <ion-icon name="wallet-outline"></ion-icon>
+                <div>
+                    <span class="payout-label">Available Balance</span>
+                    <span class="payout-amount">$437.00</span>
+                </div>
+            </div>
+            <button class="payout-btn" onclick="driver.requestPayout()">Cash Out</button>
+        </div>
+    </div>
+</section>
+
+<!-- ====== SCREEN 4: PROFILE ====== -->
+<section class="screen" id="profile-screen">
+    <header class="screen-header">
+        <h2>My Profile</h2>
+    </header>
+    <div class="screen-scroll">
+        <!-- Driver Card -->
+        <div class="driver-profile-card">
+            <div class="dpc-avatar">
+                <ion-icon name="person-circle" style="font-size: 64px; color: var(--accent-color);"></ion-icon>
+            </div>
+            <h3 class="dpc-name">Marcus Rivera</h3>
+            <div class="dpc-tier">
+                <ion-icon name="diamond"></ion-icon> Gold Courier
+            </div>
+            <div class="dpc-stats">
+                <div class="dpc-stat">
+                    <span class="dpc-stat-value">47</span>
+                    <span class="dpc-stat-label">Deliveries</span>
+                </div>
+                <div class="dpc-stat-divider"></div>
+                <div class="dpc-stat">
+                    <span class="dpc-stat-value">4.98</span>
+                    <span class="dpc-stat-label">Rating</span>
+                </div>
+                <div class="dpc-stat-divider"></div>
+                <div class="dpc-stat">
+                    <span class="dpc-stat-value">99%</span>
+                    <span class="dpc-stat-label">On-Time</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings -->
+        <div class="settings-group">
+            <div class="settings-item" onclick="driver.showVehicleInfo()">
+                <ion-icon name="car-sport-outline"></ion-icon>
+                <span>Vehicle Information</span>
+                <ion-icon name="chevron-forward-outline" class="chevron"></ion-icon>
+            </div>
+            <div class="settings-item" onclick="driver.showDocuments()">
+                <ion-icon name="document-text-outline"></ion-icon>
+                <span>Documents</span>
+                <ion-icon name="chevron-forward-outline" class="chevron"></ion-icon>
+            </div>
+            <div class="settings-item">
+                <ion-icon name="notifications-outline"></ion-icon>
+                <span>Notification Preferences</span>
+                <ion-icon name="chevron-forward-outline" class="chevron"></ion-icon>
+            </div>
+            <div class="settings-item">
+                <ion-icon name="card-outline"></ion-icon>
+                <span>Payment Methods</span>
+                <ion-icon name="chevron-forward-outline" class="chevron"></ion-icon>
+            </div>
+            <div class="settings-item">
+                <ion-icon name="shield-checkmark-outline"></ion-icon>
+                <span>Insurance & Safety</span>
+                <ion-icon name="chevron-forward-outline" class="chevron"></ion-icon>
+            </div>
+            <div class="settings-item">
+                <ion-icon name="help-circle-outline"></ion-icon>
+                <span>Help & Support</span>
+                <ion-icon name="chevron-forward-outline" class="chevron"></ion-icon>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<!-- ====== BOTTOM NAVIGATION ====== -->
+<nav class="bottom-nav">
+    <a class="nav-item active" href="#" onclick="driver.navigateTab(event, 'dashboard-screen')">
+        <ion-icon name="home"></ion-icon>
+        <span>Home</span>
+    </a>
+    <a class="nav-item" href="#" onclick="driver.navigateTab(event, 'deliveries-screen')">
+        <ion-icon name="cube"></ion-icon>
+        <span>Deliveries</span>
+    </a>
+    <a class="nav-item" href="#" onclick="driver.navigateTab(event, 'earnings-screen')">
+        <ion-icon name="wallet"></ion-icon>
+        <span>Earnings</span>
+    </a>
+    <a class="nav-item" href="#" onclick="driver.navigateTab(event, 'profile-screen')">
+        <ion-icon name="person"></ion-icon>
+        <span>Profile</span>
+    </a>
+</nav>
+
+<!-- ====== ORDER REQUEST MODAL (Slides up) ====== -->
+<div class="order-modal hidden" id="orderModal">
+    <div class="order-modal-backdrop" onclick="driver.dismissOrder()"></div>
+    <div class="order-modal-sheet">
+        <div class="modal-handle"></div>
+        <div class="om-header">
+            <span class="om-type">NEW DELIVERY REQUEST</span>
+            <span class="om-countdown" id="modalCountdown">30s</span>
+        </div>
+        <div class="om-payout">
+            <span class="om-payout-amount" id="modalPay">$85</span>
+            <span class="om-payout-label">Estimated Payout</span>
+        </div>
+        <div class="om-route-card">
+            <div class="om-stop">
+                <div class="om-dot pickup"></div>
+                <div>
+                    <span class="om-stop-label">PICKUP</span>
+                    <span class="om-stop-name" id="modalPickup">Joe's Stone Crab - Miami Beach</span>
+                    <span class="om-stop-detail" id="modalPickupDetail">12 min away</span>
+                </div>
+            </div>
+            <div class="om-route-line"></div>
+            <div class="om-stop">
+                <div class="om-dot airport"></div>
+                <div>
+                    <span class="om-stop-label">AIRPORT DROP</span>
+                    <span class="om-stop-name" id="modalAirport">MIA - Miami International</span>
+                    <span class="om-stop-detail" id="modalFlight">Spirit NK1712 - Departs 4:30 PM</span>
+                </div>
+            </div>
+        </div>
+        <div class="om-details">
+            <div class="om-detail-chip">
+                <ion-icon name="thermometer-outline"></ion-icon>
+                <span id="modalCargo">Heated Case</span>
+            </div>
+            <div class="om-detail-chip">
+                <ion-icon name="time-outline"></ion-icon>
+                <span id="modalETA">~58 min</span>
+            </div>
+            <div class="om-detail-chip">
+                <ion-icon name="resize-outline"></ion-icon>
+                <span id="modalDist">28 mi</span>
+            </div>
+        </div>
+        <div class="om-actions">
+            <button class="om-decline" onclick="driver.dismissOrder()">Decline</button>
+            <button class="om-accept" onclick="driver.acceptOrder()">
+                <ion-icon name="checkmark-circle"></ion-icon> Accept
+            </button>
+        </div>
+    </div>
+</div>
+
+</div><!-- /app-container -->
+</div><!-- /iphone-mockup -->
+
+<script src="driver-app.js"></script>
+</body>
+</html>
