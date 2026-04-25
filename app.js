@@ -1,4 +1,13 @@
 const app = {
+    activeMissions: 0,
+    setMissionState(count) {
+        this.activeMissions = count;
+        if (this.activeMissions === 0) {
+            document.body.classList.add('no-active-mission');
+        } else {
+            document.body.classList.remove('no-active-mission');
+        }
+    },
     map: null,
 
     initMap() {
@@ -19,6 +28,7 @@ const app = {
                 this.mapMock.setConfigProperty('basemap', 'theme', 'monochrome');
                 this.mapMock.setConfigProperty('basemap', 'lightPreset', 'night');
                 this.mapMock.setConfigProperty('basemap', 'show3dObjects', true);
+                this._addUSABoundary(this.mapMock);
             });
         }
 
@@ -38,6 +48,9 @@ const app = {
             this.map.setConfigProperty('basemap', 'lightPreset', 'night');
             this.map.setConfigProperty('basemap', 'show3dObjects', true);
             
+            // Add USA Boundary
+            this._addUSABoundary(this.map);
+            
             // Add trending orders layer
             this._addTrendingOrders();
         });
@@ -49,6 +62,85 @@ const app = {
                 hero.classList.add('faded');
             }
         });
+    },
+
+    /**
+     * Adds a gold USA boundary outline with pulsating glow
+     */
+    _addUSABoundary(mapInstance) {
+        if (!mapInstance.getSource('usa-boundary')) {
+            mapInstance.addSource('usa-boundary', {
+                type: 'geojson',
+                data: 'https://raw.githubusercontent.com/johan/world.geo.json/master/countries/USA.geo.json'
+            });
+            
+            // Glow layer (animated)
+            mapInstance.addLayer({
+                id: 'usa-boundary-glow',
+                type: 'line',
+                source: 'usa-boundary',
+                slot: 'top',
+                paint: {
+                    'line-color': '#FFDF73',
+                    'line-width': 4,
+                    'line-opacity': 0.0,
+                    'line-blur': 6,
+                    'line-emissive-strength': 1
+                }
+            });
+
+            // Crisp gold line on top (0.5px = 75% of previous 2px)
+            mapInstance.addLayer({
+                id: 'usa-boundary-line',
+                type: 'line',
+                source: 'usa-boundary',
+                slot: 'top',
+                paint: {
+                    'line-color': '#FFD700',
+                    'line-width': 0.5,
+                    'line-opacity': 0.9,
+                    'line-emissive-strength': 1
+                }
+            });
+
+            // Pulsating glow animation — fires every 5s, gentle ease in/out
+            this._pulseUSABoundary(mapInstance);
+        }
+    },
+
+    _pulseUSABoundary(mapInstance) {
+        const glowId = 'usa-boundary-glow';
+        const duration = 3500;  // ms for one in/out cycle
+        const interval = 7000;  // ms between pulses
+
+        const easeInOut = (t) => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+
+        const runPulse = () => {
+            if (!mapInstance.getLayer(glowId)) return;
+            const start = performance.now();
+
+            const step = (now) => {
+                if (!mapInstance.getLayer(glowId)) return;
+                const elapsed = now - start;
+                const t = Math.min(elapsed / duration, 1);
+                // Ease in first half, ease out second half (ping-pong)
+                const ping = t < 0.5 ? easeInOut(t * 2) : easeInOut((1 - t) * 2);
+
+                mapInstance.setPaintProperty(glowId, 'line-opacity', ping * 0.65);
+                mapInstance.setPaintProperty(glowId, 'line-width', 4 + ping * 10);
+
+                if (t < 1) {
+                    requestAnimationFrame(step);
+                }
+            };
+            requestAnimationFrame(step);
+        };
+
+        // First pulse after a short delay, then repeat
+        setTimeout(() => {
+            runPulse();
+            setInterval(runPulse, interval);
+        }, 2000);
     },
 
     /**
@@ -226,6 +318,29 @@ const app = {
                 loader.style.opacity = '0';
                 setTimeout(() => loader.style.display = 'none', 600);
             }
+
+            // Word switch animation for Hero Title
+            setInterval(() => {
+                const h1s = document.querySelectorAll('.hero-section h1');
+                h1s.forEach(h1 => {
+                    const span = h1.querySelector('span');
+                    if (span) {
+                        span.style.transition = 'opacity 0.4s ease';
+                        span.style.opacity = '0';
+                        setTimeout(() => {
+                            span.style.transition = '';
+                            span.style.opacity = '';
+                            
+                            const isToday = span.textContent.includes('Today.');
+                            span.textContent = isToday ? 'Anywhere.' : 'Today.';
+                            
+                            span.classList.remove('anim-today', 'anim-anywhere');
+                            void span.offsetWidth; // Trigger reflow
+                            span.classList.add(isToday ? 'anim-anywhere' : 'anim-today');
+                        }, 400);
+                    }
+                });
+            }, 12000);
         }, 1200);
 
         // Start random ambient animations for markers
@@ -263,12 +378,12 @@ const app = {
             
             // Clear any existing anim classes on all markers
             this._emojiMarkers.forEach(el => {
-                el.classList.remove('anim-bounce', 'anim-flame', 'anim-hearts', 'anim-steam', 'anim-tongue', 'anim-eat', 'anim-drizzle');
+                el.classList.remove('anim-bounce', 'anim-flame', 'anim-hearts', 'anim-steam', 'anim-tongue', 'anim-drizzle');
             });
 
             // Pick randomly between 1 and 3 markers to animate
             const numToAnimate = Math.floor(Math.random() * 3) + 1;
-            const animations = ['anim-bounce', 'anim-flame', 'anim-hearts', 'anim-steam', 'anim-tongue', 'anim-eat'];
+            const animations = ['anim-bounce', 'anim-flame', 'anim-hearts', 'anim-steam', 'anim-tongue'];
             
             for (let i = 0; i < numToAnimate; i++) {
                 const randomMarker = this._emojiMarkers[Math.floor(Math.random() * this._emojiMarkers.length)];
@@ -411,6 +526,14 @@ const app = {
             screen.classList.remove('active');
         });
         document.getElementById(screenId).classList.add('active');
+        
+        // Hide global overlays that bleed into other screens (like Profile View)
+        if (screenId !== 'home-screen') {
+            const pickupSheet = document.getElementById('pickup-sheet');
+            const ratingsHeader = document.getElementById('ratings-header');
+            if (pickupSheet) pickupSheet.classList.add('hidden');
+            if (ratingsHeader) ratingsHeader.classList.add('hidden');
+        }
 
         // Trigger map zoom and driver animation for tracking screen
         if (screenId === 'tracking-screen' && this._activeOriginCoords && this.map) {
@@ -636,6 +759,12 @@ const app = {
         const wrapper = event.target.closest('.ai-command-wrapper');
         if (!wrapper) return;
         
+        // Toggle submit arrow visibility
+        const arrow = wrapper.querySelector('.cmd-submit-btn');
+        if (arrow) {
+            arrow.style.display = query.trim().length > 0 ? 'block' : 'none';
+        }
+        
         const popup = wrapper.querySelector('.autocomplete-popup-container');
         if (!popup) return;
         
@@ -653,6 +782,10 @@ const app = {
                 // Backend Proxy Geocoding - search actual Google Local restaurants
                 const res = await fetch(`/api/autocomplete_restaurants?query=${encodeURIComponent(query)}`);
                 const data = await res.json();
+                
+                // Double check input hasn't been cleared while waiting for API
+                const currentQuery = event.target.value;
+                if (!currentQuery || currentQuery.length < 3) return;
                 
                 if (data.features && data.features.length > 0) {
                     popup.innerHTML = '';
@@ -729,6 +862,8 @@ const app = {
     },
 
     openDispatchModal() {
+        this.fireGoldConfetti();
+        
         const modal = document.getElementById('dispatch-modal');
         const sheet = modal.querySelector('.dispatch-sheet');
         if(!modal || !sheet) return;
@@ -739,6 +874,65 @@ const app = {
             modal.style.background = 'rgba(10,10,10,0.7)';
             sheet.style.transform = 'translateY(0)';
         }, 10);
+    },
+
+    fireGoldConfetti() {
+        const colors = ['#d4af37', '#fcecba', '#aa8c2c', '#ffffff'];
+        
+        const activeIphone = document.querySelector('#active-iphone-simulator') || document.querySelector('.iphone-mockup');
+        if (!activeIphone) return;
+
+        for (let i = 0; i < 60; i++) {
+            const confetti = document.createElement('div');
+            confetti.style.position = 'absolute';
+            confetti.style.width = Math.random() * 8 + 4 + 'px';
+            confetti.style.height = Math.random() * 12 + 6 + 'px';
+            confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+            confetti.style.left = Math.random() * 100 + '%'; // Random horizontal start
+            confetti.style.top = -20 + 'px'; // Start above screen
+            confetti.style.zIndex = '99999';
+            confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+            confetti.style.pointerEvents = 'none';
+            activeIphone.appendChild(confetti);
+
+            // Snow-like physics
+            let vx = Math.random() * 2 - 1; // Slight horizontal drift
+            let vy = Math.random() * 2 + 1; // Slow downward fall
+            let x = 0;
+            let y = 0;
+            let rot = Math.random() * 360;
+            let rotV = Math.random() * 4 - 2; // Slow rotation
+            let opacity = 1;
+            
+            // Random delay to stagger the snowfall
+            const delay = Math.random() * 1000;
+
+            setTimeout(() => {
+                const animate = () => {
+                    // Drift back and forth slightly like snow
+                    vx += (Math.random() * 0.2 - 0.1);
+                    if (vx > 2) vx = 2;
+                    if (vx < -2) vx = -2;
+                    
+                    x += vx;
+                    y += vy;
+                    rot += rotV;
+                    
+                    // Fade out slowly as they reach bottom
+                    if (y > 600) opacity -= 0.005;
+                    
+                    confetti.style.transform = `translate(${x}px, ${y}px) rotate(${rot}deg)`;
+                    confetti.style.opacity = opacity;
+                    
+                    if (opacity <= 0 || y > 900) {
+                        confetti.remove();
+                    } else {
+                        requestAnimationFrame(animate);
+                    }
+                };
+                requestAnimationFrame(animate);
+            }, delay);
+        }
     },
 
     closeDispatchModal() {
@@ -816,7 +1010,10 @@ const app = {
                     
                     // Navigate to home then to tracking
                     app.goBack('home-screen');
-                    setTimeout(() => { app.navigateTo('tracking-screen'); }, 500);
+                    setTimeout(() => { 
+                        app.setMissionState(1);
+                        app.navigateTo('tracking-screen'); 
+                    }, 500);
                     return;
                 }
                 
@@ -1594,7 +1791,12 @@ const app = {
             console.error('[JetSlice] Route API error:', err);
             warnTag.querySelector('span').textContent = 'Server unavailable. Please try again.';
             warnTag.style.display = 'flex';
-        } finally {
+            
+            const card = document.getElementById('booking-card');
+            if (card && card.classList.contains('collapsed')) {
+                card.classList.remove('collapsed');
+            }
+            
             btn.innerHTML = 'Calculate Logistics <ion-icon name="arrow-forward-outline"></ion-icon>';
             btn.disabled = false;
         }
@@ -1654,10 +1856,79 @@ const app = {
         const totalRow = totalCard.querySelector('.total-row');
         totalRow.innerHTML = `
             <span>Total Upfront Cost</span>
-            <h2>$${data.total_cost.toLocaleString('en-US', { minimumFractionDigits: 2 })}</h2>`;
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <h2 id="dynamic-total-cost-display">$${data.total_cost.toLocaleString('en-US', { minimumFractionDigits: 2 })}</h2>
+                <div onclick="app.addTip(${data.total_cost}, 'dynamic-total-cost-display')" style="background: rgba(212, 175, 55, 0.15); border: 1px solid var(--accent-color); padding: 6px; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: 0.2s;" title="Add 20% Tip">
+                    <ion-icon name="add" style="color: var(--accent-color); font-size: 18px;"></ion-icon>
+                </div>
+            </div>`;
 
         // Store route data for tracking screen
         this._currentRoute = data;
+    },
+
+    /**
+     * Starts the tracking simulation screen
+     */
+    addTip(baseCost, targetElementId) {
+        if (this._hasTipped) return;
+        this._hasTipped = true;
+        
+        const withTip = baseCost * 1.20;
+        const display = document.getElementById(targetElementId);
+        if (display) {
+            display.innerHTML = `$${withTip.toLocaleString('en-US', { minimumFractionDigits: 2 })} <span style="font-size:12px; color:var(--accent-color); vertical-align:middle; margin-left: 6px;">(inc. tip)</span>`;
+        }
+    },
+
+    addDriverTip(event, iconEl) {
+        if (event) event.stopPropagation(); // prevent opening dispatch modal if it's bubbled
+        if (this._hasDriverTipped) return;
+        
+        const costEl = document.getElementById('pickup-cost');
+        if (costEl && costEl.textContent !== '...' && costEl.textContent !== '---') {
+            const currentStr = costEl.textContent.replace(/[^0-9.]/g, '');
+            const baseCost = parseFloat(currentStr);
+            if (!isNaN(baseCost)) {
+                this._hasDriverTipped = true;
+                const withTip = baseCost * 1.20;
+                costEl.innerHTML = `$${Math.floor(withTip).toLocaleString()}`;
+                
+                // Add tip indicator text
+                const tipBadge = document.createElement('span');
+                tipBadge.style.cssText = "font-size: 10px; color: var(--accent-color); font-weight: 800; margin-left: 6px; vertical-align: middle; text-transform: uppercase;";
+                tipBadge.textContent = "+ TIP";
+                costEl.parentNode.appendChild(tipBadge);
+                
+                // Turn icon gold
+                iconEl.style.color = "var(--accent-color)";
+            }
+        }
+    },
+
+    addDppTip(event, iconEl) {
+        if (event) event.stopPropagation();
+        if (this._hasDppTipped) return;
+        
+        const costEl = document.getElementById('dpp-total-cost');
+        if (costEl && costEl.textContent !== '$0' && costEl.textContent !== '---') {
+            const currentStr = costEl.textContent.replace(/[^0-9.]/g, '');
+            const baseCost = parseFloat(currentStr);
+            if (!isNaN(baseCost)) {
+                this._hasDppTipped = true;
+                const withTip = baseCost * 1.20;
+                costEl.innerHTML = `$${Math.floor(withTip).toLocaleString()}`;
+                
+                // Add tip indicator text
+                const tipBadge = document.createElement('span');
+                tipBadge.style.cssText = "font-size: 10px; color: var(--accent-color); font-weight: 800; margin-left: 6px; vertical-align: middle; text-transform: uppercase;";
+                tipBadge.textContent = "+ TIP";
+                costEl.parentNode.appendChild(tipBadge);
+                
+                // Turn icon gold
+                iconEl.style.color = "var(--accent-color)";
+            }
+        }
     },
 
     /**
@@ -2801,6 +3072,17 @@ function bootJetSlice() {
         const appCont = document.getElementById('active-iphone-simulator').querySelector('.app-container');
         if (appCont) appCont.addEventListener('click', hideWing, { once: true });
     }
+
+    // Global click listener to hide autocomplete popup when clicking outside
+    document.addEventListener('click', (event) => {
+        const popup = document.querySelector('.autocomplete-popup-container');
+        const cmdField = document.getElementById('cmdField');
+        if (popup && !popup.classList.contains('hidden')) {
+            if (!popup.contains(event.target) && event.target !== cmdField) {
+                popup.classList.add('hidden');
+            }
+        }
+    });
 }
 
 // Initialize listeners when DOM is ready, but defer Mapbox until API token loads

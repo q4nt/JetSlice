@@ -7,7 +7,7 @@
     --accent-color: #d4af37; /* Luxury Gold */
     --accent-glow: rgba(212, 175, 55, 0.4);
     --border-color: rgba(255, 255, 255, 0.08);
-    --panel-glass: rgba(16, 17, 22, 0.92);
+    --panel-glass: #000;
     --panel-border: rgba(212, 175, 55, 0.2);
     --uber-color: #ffffff;
     --united-color: #005DAA;
@@ -165,7 +165,7 @@ body {
     z-index: 100;
 }
 .app-header.solid {
-    background: var(--surface-color);
+    background: #000;
     border-bottom: 1px solid var(--border-color);
 }
 .app-header h2 {
@@ -637,7 +637,7 @@ body {
     left: 0;
     width: 100%;
     height: 80px;
-    background: rgba(11,12,16,0.9);
+    background: #000;
     backdrop-filter: blur(10px);
     border-top: 1px solid var(--border-color);
     display: flex;
@@ -797,6 +797,53 @@ body {
     0% { transform: translate(15px, 5px) rotate(-20deg) scale(0.5); opacity: 0; }
     50% { transform: translate(5px, -15px) rotate(10deg) scale(1.2); opacity: 1; }
     100% { transform: translate(-5px, 5px) rotate(-20deg) scale(0.5); opacity: 0; }
+}
+
+@keyframes textAnimToday {
+    0% { transform: translateY(20px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes textAnimAnywhere {
+    0% { transform: scale(0.8); opacity: 0; filter: blur(5px); }
+    100% { transform: scale(1); opacity: 1; filter: blur(0); }
+}
+
+.anim-today {
+    animation: textAnimToday 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.anim-anywhere {
+    animation: textAnimAnywhere 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Profile View Background with Gold Flakes */
+#profile-screen {
+    background-color: #0b0c10;
+    background-image: 
+        radial-gradient(1px 1px at 10% 20%, #d4af37 100%, transparent), 
+        radial-gradient(1.5px 1.5px at 30% 60%, rgba(212,175,55,0.8) 100%, transparent), 
+        radial-gradient(1px 1px at 50% 10%, #d4af37 100%, transparent), 
+        radial-gradient(2px 2px at 80% 40%, rgba(212,175,55,0.6) 100%, transparent), 
+        radial-gradient(1px 1px at 90% 80%, #d4af37 100%, transparent), 
+        radial-gradient(1.5px 1.5px at 20% 90%, #d4af37 100%, transparent), 
+        radial-gradient(1px 1px at 60% 80%, rgba(212,175,55,0.5) 100%, transparent);
+    background-size: 140px 140px;
+    animation: goldSnow 30s linear infinite;
+}
+
+#orders-screen {
+    background-color: #0b0c10;
+    background-image: 
+        url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><text x="10" y="30" font-size="14" opacity="0.3">🍔</text><text x="60" y="80" font-size="12" opacity="0.2">🍕</text></svg>'),
+        url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><text x="40" y="40" font-size="16" opacity="0.15">🥩</text><text x="80" y="20" font-size="12" opacity="0.25">🍣</text></svg>'),
+        url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><text x="20" y="80" font-size="14" opacity="0.2">🍾</text><text x="70" y="50" font-size="12" opacity="0.15">🥗</text></svg>');
+    background-size: 200px 200px, 250px 250px, 300px 300px;
+    animation: goldSnow 30s linear infinite;
+}
+@keyframes goldSnow {
+    0% { background-position: 0px 0px, 0px 0px, 0px 0px, 0px 0px, 0px 0px, 0px 0px, 0px 0px; }
+    100% { background-position: 140px 280px, -140px 420px, 0px 560px, 280px 280px, -280px 420px, 140px 560px, -140px 280px; }
 }
 @keyframes chompChomp {
     0%, 20%   { clip-path: polygon(0 0, 100% 0, 100% 100%, 0% 100%); transform: scale(1) rotate(0deg); }
@@ -1942,3 +1989,86 @@ body.light-theme {
     animation: goldShimmer 3.5s infinite linear;
     box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -1px 0 rgba(0,0,0,0.4);
 }
+/* Plane Flying Animation with Clouds */
+.plane-flying-container {
+    position: relative;
+    overflow: hidden;
+}
+.cloud-particle {
+    position: absolute;
+    right: -15px;
+    width: 10px;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: 10px;
+    animation: flyLeft 1.2s linear infinite;
+    z-index: 0;
+}
+@keyframes flyLeft {
+    from { right: -15px; }
+    to { right: 50px; }
+}
+
+/* No Active Mission State */
+body.no-active-mission .active-mission-group {
+    display: none !important;
+}
+body.no-active-mission .re-orders-list .curated-item {
+    background: linear-gradient(135deg, #d4af37 0%, #fcecba 100%) !important;
+    border: none !important;
+    box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4) !important;
+    color: #000 !important;
+}
+body.no-active-mission .re-orders-list .curated-item h4,
+body.no-active-mission .re-orders-list .curated-item p {
+    color: #000 !important;
+}
+body.no-active-mission .re-orders-list .curated-item .emoji-badge {
+    background: rgba(0,0,0,0.1) !important;
+}
+body.no-active-mission .re-orders-list .curated-item ion-icon {
+    color: #000 !important;
+}
+
+/* Accordion Styles */
+.accordion-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease, padding 0.3s ease;
+    background: rgba(255, 255, 255, 0.02);
+    padding: 0 16px;
+}
+.accordion-content.expanded {
+    max-height: 300px;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.accordion-item {
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    color: var(--text-secondary);
+    font-size: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.accordion-item:last-child {
+    border-bottom: none;
+}
+.accordion-item input[type="text"],
+.accordion-item select {
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    color: white;
+    text-align: right;
+    font-size: 13px;
+    padding: 6px 10px;
+    width: 50%;
+}
+.accordion-item input[type="checkbox"] {
+    accent-color: var(--accent-color);
+    width: 16px;
+    height: 16px;
+}
+
