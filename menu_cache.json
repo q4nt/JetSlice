@@ -1,0 +1,1738 @@
+{
+  "version": "1.0",
+  "generated_at": "2026-04-25T14:52:49Z",
+  "total_restaurants": 16,
+  "successful_scrapes": 16,
+  "failed_scrapes": 0,
+  "restaurants": {
+    "L'Industrie Pizzeria|New York, NY": {
+      "emoji": "🍕",
+      "restaurant": "L'Industrie Pizzeria",
+      "city": "New York, NY",
+      "origin": "104 Christopher St, New York, NY",
+      "dest": "Beverly Hills, CA",
+      "foodItem": "Signature Artisan Pizza",
+      "menu": [
+        {
+          "name": "Margherita Pizza",
+          "price": 18.0,
+          "description": "Classic pizza with fresh mozzarella.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Pepperoni Pizza",
+          "price": 20.0,
+          "description": "Topped with spicy pepperoni slices.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Mushroom Pizza",
+          "price": 19.0,
+          "description": "Loaded with fresh mushrooms and cheese.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Sicilian Pizza",
+          "price": 22.0,
+          "description": "Thick crust with robust tomato sauce.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Caesar Salad",
+          "price": 12.0,
+          "description": "Crisp romaine with Caesar dressing.",
+          "category": "Sides",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Garlic Knots",
+          "price": 8.0,
+          "description": "Soft knots tossed in garlic butter.",
+          "category": "Sides",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Tiramisu",
+          "price": 7.0,
+          "description": "Classic Italian coffee-flavored dessert.",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Cannoli",
+          "price": 6.0,
+          "description": "Crispy pastry filled with sweet ricotta.",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Italian Soda",
+          "price": 4.0,
+          "description": "Refreshing flavored carbonated drink.",
+          "category": "Drinks",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Limoncello Spritz",
+          "price": 10.0,
+          "description": "Citrusy cocktail with sparkling wine.",
+          "category": "Drinks",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Pesto Pizza",
+          "price": 21.0,
+          "description": "Topped with fresh basil pesto.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Meat Lovers Pizza",
+          "price": 24.0,
+          "description": "Loaded with various meats and cheese.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Caprese Salad",
+          "price": 11.0,
+          "description": "Fresh mozzarella, tomatoes, and basil.",
+          "category": "Sides",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Fried Zucchini",
+          "price": 9.0,
+          "description": "Crispy zucchini served with marinara.",
+          "category": "Sides",
+          "source": "openai_knowledge"
+        }
+      ],
+      "item_count": 14,
+      "source": "openai_knowledge",
+      "menu_url": null,
+      "scraped_at": "2026-04-25T14:51:43Z"
+    },
+    "Sushi Roku|Los Angeles, CA": {
+      "emoji": "🍣",
+      "restaurant": "Sushi Roku",
+      "city": "Los Angeles, CA",
+      "origin": "Los Angeles, CA",
+      "dest": "Manhattan, NY",
+      "foodItem": "Premium Omakase Box",
+      "menu": [
+        {
+          "name": "Sushi Platter",
+          "price": 45.0,
+          "description": "Assorted sushi selection.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Spicy Tuna Roll",
+          "price": 15.0,
+          "description": "Tuna, spicy mayo, and cucumber.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "California Roll",
+          "price": 12.0,
+          "description": "Crab, avocado, and cucumber roll.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Yellowtail Sashimi",
+          "price": 20.0,
+          "description": "Fresh yellowtail served sashimi style.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Miso Soup",
+          "price": 5.0,
+          "description": "Traditional miso broth with tofu.",
+          "category": "Sides",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Edamame",
+          "price": 7.0,
+          "description": "Steamed and lightly salted soybeans.",
+          "category": "Sides",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Tempura Vegetables",
+          "price": 10.0,
+          "description": "Crispy battered seasonal vegetables.",
+          "category": "Sides",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Green Tea",
+          "price": 3.0,
+          "description": "Traditional Japanese green tea.",
+          "category": "Drinks",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Sake",
+          "price": 8.0,
+          "description": "Japanese rice wine, served cold.",
+          "category": "Drinks",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Chocolate Lava Cake",
+          "price": 9.0,
+          "description": "Warm chocolate cake with molten center.",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Mochi Ice Cream",
+          "price": 6.0,
+          "description": "Sweet rice cake with ice cream filling.",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Poke Bowl",
+          "price": 18.0,
+          "description": "Fresh fish with rice and toppings.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Seaweed Salad",
+          "price": 8.0,
+          "description": "Seasoned seaweed with sesame dressing.",
+          "category": "Sides",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Cucumber Roll",
+          "price": 10.0,
+          "description": "Simple roll with fresh cucumber.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        }
+      ],
+      "item_count": 14,
+      "source": "openai_knowledge",
+      "menu_url": null,
+      "scraped_at": "2026-04-25T13:21:38Z"
+    },
+    "La Taqueria|San Francisco, CA": {
+      "emoji": "🌯",
+      "restaurant": "La Taqueria",
+      "city": "San Francisco, CA",
+      "origin": "San Francisco, CA",
+      "dest": "Chicago, IL",
+      "foodItem": "Carne Asada Super Burrito",
+      "menu": [
+        {
+          "name": "Carnitas Taco",
+          "price": 4.5,
+          "description": "Slow-cooked pork with fresh toppings.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Chicken Taco",
+          "price": 4.5,
+          "description": "Grilled chicken with salsa and onions.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Fish Taco",
+          "price": 5.0,
+          "description": "Crispy fish with cabbage and sauce.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Vegetarian Taco",
+          "price": 4.0,
+          "description": "Mixed vegetables with avocado and salsa.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Super Burrito",
+          "price": 9.0,
+          "description": "Large burrito with choice of meat.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Quesadilla",
+          "price": 7.0,
+          "description": "Cheese-filled tortilla, grilled to perfection.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Chips and Salsa",
+          "price": 3.5,
+          "description": "Crispy tortilla chips with fresh salsa.",
+          "category": "Sides",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Guacamole",
+          "price": 4.5,
+          "description": "Fresh avocado dip with lime and spices.",
+          "category": "Sides",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Horchata",
+          "price": 3.0,
+          "description": "Sweet rice drink with cinnamon.",
+          "category": "Drinks",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Mexican Coke",
+          "price": 2.5,
+          "description": "Classic soda made with cane sugar.",
+          "category": "Drinks",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Flan",
+          "price": 4.0,
+          "description": "Creamy caramel custard dessert.",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Churros",
+          "price": 3.5,
+          "description": "Fried dough pastry with sugar.",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        }
+      ],
+      "item_count": 12,
+      "source": "openai_knowledge",
+      "menu_url": null,
+      "scraped_at": "2026-04-25T13:21:56Z"
+    },
+    "Au Cheval|Chicago, IL": {
+      "emoji": "🍔",
+      "restaurant": "Au Cheval",
+      "city": "Chicago, IL",
+      "origin": "Chicago, IL",
+      "dest": "Miami, FL",
+      "foodItem": "Double Cheeseburger",
+      "menu": [
+        {
+          "name": "Double Cheeseburger",
+          "price": 16.0,
+          "description": "Two patties with cheese and toppings",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Bacon",
+          "price": 4.0,
+          "description": "Crispy, thick-cut bacon strips",
+          "category": "Sides",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Fries",
+          "price": 6.0,
+          "description": "Crispy golden French fries",
+          "category": "Sides",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Eggs",
+          "price": 3.0,
+          "description": "Two eggs cooked to order",
+          "category": "Sides",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Pork Belly",
+          "price": 10.0,
+          "description": "Tender, flavorful pork belly slices",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Cheddar Cheese",
+          "price": 1.5,
+          "description": "Sharp cheddar cheese slice",
+          "category": "Add-ons",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Pickles",
+          "price": 1.0,
+          "description": "Crispy dill pickle slices",
+          "category": "Add-ons",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Milkshake",
+          "price": 7.0,
+          "description": "Rich and creamy milkshake",
+          "category": "Drinks",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Onion Rings",
+          "price": 8.0,
+          "description": "Crispy battered onion rings",
+          "category": "Sides",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Chocolate Cake",
+          "price": 6.0,
+          "description": "Decadent chocolate layer cake",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "House Salad",
+          "price": 9.0,
+          "description": "Mixed greens with house dressing",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Soda",
+          "price": 2.5,
+          "description": "Assorted soft drinks available",
+          "category": "Drinks",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Truffle Aioli",
+          "price": 1.5,
+          "description": "Rich truffle-flavored dipping sauce",
+          "category": "Add-ons",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Vanilla Ice Cream",
+          "price": 4.0,
+          "description": "Classic vanilla ice cream scoop",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        }
+      ],
+      "item_count": 14,
+      "source": "openai_knowledge",
+      "menu_url": "https://www.auchevaldiner.com/chicago/menus",
+      "scraped_at": "2026-04-25T14:51:53Z"
+    },
+    "Gus's Fried Chicken|Memphis, TN": {
+      "emoji": "🍗",
+      "restaurant": "Gus's Fried Chicken",
+      "city": "Memphis, TN",
+      "origin": "Memphis, TN",
+      "dest": "New York, NY",
+      "foodItem": "Spicy Fried Chicken Plate",
+      "menu": [
+        {
+          "name": "Piece Dark Plate",
+          "price": 12.6,
+          "description": "",
+          "category": "Menu",
+          "source": "playwright_scrape"
+        },
+        {
+          "name": "Piece White Plate",
+          "price": 12.6,
+          "description": "",
+          "category": "Menu",
+          "source": "playwright_scrape"
+        },
+        {
+          "name": "Piece",
+          "price": 6.1,
+          "description": "",
+          "category": "Menu",
+          "source": "playwright_scrape"
+        },
+        {
+          "name": "Baked Beans. Small",
+          "price": 1.5,
+          "description": "",
+          "category": "Menu",
+          "source": "playwright_scrape"
+        },
+        {
+          "name": "Medium",
+          "price": 3.0,
+          "description": "",
+          "category": "Menu",
+          "source": "playwright_scrape"
+        },
+        {
+          "name": "Large",
+          "price": 4.0,
+          "description": "",
+          "category": "Menu",
+          "source": "playwright_scrape"
+        },
+        {
+          "name": "Pecan. Whole Pies",
+          "price": 12.5,
+          "description": "",
+          "category": "Menu",
+          "source": "playwright_scrape"
+        },
+        {
+          "name": "Piece Tender Plate",
+          "price": 16.5,
+          "description": "",
+          "category": "Menu",
+          "source": "playwright_scrape"
+        },
+        {
+          "name": "Chicken Sandwich Combo",
+          "price": 8.39,
+          "description": "",
+          "category": "Menu",
+          "source": "playwright_scrape"
+        },
+        {
+          "name": "Starters & Sides",
+          "price": 33.15,
+          "description": "",
+          "category": "Menu",
+          "source": "playwright_scrape"
+        },
+        {
+          "name": "Fried Green Tomatoes",
+          "price": 5.5,
+          "description": "",
+          "category": "Menu",
+          "source": "playwright_scrape"
+        },
+        {
+          "name": "Fried Okra",
+          "price": 5.5,
+          "description": "",
+          "category": "Menu",
+          "source": "playwright_scrape"
+        },
+        {
+          "name": "Potato Salad",
+          "price": 4.7,
+          "description": "",
+          "category": "Menu",
+          "source": "playwright_scrape"
+        },
+        {
+          "name": "Mac & Cheese",
+          "price": 4.2,
+          "description": "",
+          "category": "Menu",
+          "source": "playwright_scrape"
+        },
+        {
+          "name": "Desserts",
+          "price": 4.7,
+          "description": "",
+          "category": "Menu",
+          "source": "playwright_scrape"
+        },
+        {
+          "name": "Sweet Potato Pie",
+          "price": 12.5,
+          "description": "",
+          "category": "Menu",
+          "source": "playwright_scrape"
+        },
+        {
+          "name": "DoorDash",
+          "price": 12.5,
+          "description": "",
+          "category": "Menu",
+          "source": "playwright_scrape"
+        }
+      ],
+      "item_count": 17,
+      "source": "playwright_scrape",
+      "menu_url": null,
+      "scraped_at": "2026-04-25T13:22:17Z"
+    },
+    "Joe's Stone Crab|Miami, FL": {
+      "emoji": "🦀",
+      "restaurant": "Joe's Stone Crab",
+      "city": "Miami, FL",
+      "origin": "Miami, FL",
+      "dest": "Denver, CO",
+      "foodItem": "Large Stone Crab Claws",
+      "menu": [
+        {
+          "name": "Stone Crab Claws",
+          "price": 45.0,
+          "description": "Fresh stone crab claws served chilled.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Key Lime Pie",
+          "price": 9.0,
+          "description": "Classic tart dessert with graham cracker crust.",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Fried Shrimp",
+          "price": 28.0,
+          "description": "Crispy fried shrimp with cocktail sauce.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Coleslaw",
+          "price": 8.0,
+          "description": "Creamy coleslaw with a tangy dressing.",
+          "category": "Sides",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Lobster Mac & Cheese",
+          "price": 32.0,
+          "description": "Rich mac and cheese with lobster pieces.",
+          "category": "Sides",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Crab Cakes",
+          "price": 30.0,
+          "description": "Delicious crab cakes with remoulade sauce.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Garlic Mashed Potatoes",
+          "price": 10.0,
+          "description": "Creamy mashed potatoes with garlic flavor.",
+          "category": "Sides",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Seafood Gumbo",
+          "price": 18.0,
+          "description": "Hearty gumbo with shrimp and crab.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Caesar Salad",
+          "price": 12.0,
+          "description": "Classic Caesar with romaine and croutons.",
+          "category": "Salads",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Mahi Mahi",
+          "price": 34.0,
+          "description": "Grilled mahi mahi with seasonal vegetables.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Chocolate Cake",
+          "price": 10.0,
+          "description": "Rich chocolate cake with frosting.",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Clam Chowder",
+          "price": 14.0,
+          "description": "Creamy chowder with clams and potatoes.",
+          "category": "Soups",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Tropical Fruit Salad",
+          "price": 9.0,
+          "description": "Fresh seasonal tropical fruits.",
+          "category": "Sides",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "White Wine",
+          "price": 12.0,
+          "description": "Refreshing white wine by the glass.",
+          "category": "Drinks",
+          "source": "openai_knowledge"
+        }
+      ],
+      "item_count": 14,
+      "source": "openai_knowledge",
+      "menu_url": null,
+      "scraped_at": "2026-04-25T14:52:06Z"
+    },
+    "Torchy's Tacos|Austin, TX": {
+      "emoji": "🌮",
+      "restaurant": "Torchy's Tacos",
+      "city": "Austin, TX",
+      "origin": "Austin, TX",
+      "dest": "Seattle, WA",
+      "foodItem": "Trailer Park Taco Set",
+      "menu": [
+        {
+          "name": "Trailer Park Taco",
+          "price": 4.5,
+          "description": "Fried chicken, green chilies, and pico.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "The Democrat Taco",
+          "price": 4.75,
+          "description": "Brisket, cheese, and avocado.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "The Republican Taco",
+          "price": 4.75,
+          "description": "Grilled chicken, cheese, and avocado.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "The Migas Taco",
+          "price": 4.25,
+          "description": "Eggs, tortilla chips, and cheese.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Pork Carnitas Taco",
+          "price": 4.5,
+          "description": "Slow-cooked pork with fresh toppings.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Fried Avocado Taco",
+          "price": 4.25,
+          "description": "Crispy avocado with fresh toppings.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Street Corn",
+          "price": 3.5,
+          "description": "Grilled corn with cotija cheese.",
+          "category": "Sides",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Chips and Queso",
+          "price": 4.0,
+          "description": "Tortilla chips with creamy queso.",
+          "category": "Sides",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Mexican Coke",
+          "price": 2.5,
+          "description": "Classic Coke made with cane sugar.",
+          "category": "Drinks",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Horchata",
+          "price": 3.0,
+          "description": "Sweet rice milk drink with cinnamon.",
+          "category": "Drinks",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Chocolate Chip Cookie",
+          "price": 1.5,
+          "description": "Freshly baked chocolate chip cookie.",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Lemonade",
+          "price": 2.5,
+          "description": "Refreshing homemade lemonade.",
+          "category": "Drinks",
+          "source": "openai_knowledge"
+        }
+      ],
+      "item_count": 12,
+      "source": "openai_knowledge",
+      "menu_url": null,
+      "scraped_at": "2026-04-25T13:22:46Z"
+    },
+    "Pecan Lodge|Dallas, TX": {
+      "emoji": "🍖",
+      "restaurant": "Pecan Lodge",
+      "city": "Dallas, TX",
+      "origin": "Dallas, TX",
+      "dest": "San Francisco, CA",
+      "foodItem": "Smoked Brisket Pound",
+      "menu": [
+        {
+          "name": "Brisket",
+          "price": 22.0,
+          "description": "Smoked beef brisket, tender and flavorful.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Pulled Pork",
+          "price": 18.0,
+          "description": "Slow-cooked, juicy pulled pork.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Ribs",
+          "price": 25.0,
+          "description": "St. Louis-style ribs, smoky and tender.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Sausage",
+          "price": 16.0,
+          "description": "House-made sausage, spicy and savory.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Mac & Cheese",
+          "price": 6.0,
+          "description": "Creamy and cheesy comfort food.",
+          "category": "Sides",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Coleslaw",
+          "price": 4.0,
+          "description": "Crisp cabbage with tangy dressing.",
+          "category": "Sides",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Baked Beans",
+          "price": 5.0,
+          "description": "Sweet and smoky baked beans.",
+          "category": "Sides",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Potato Salad",
+          "price": 5.0,
+          "description": "Classic potato salad with herbs.",
+          "category": "Sides",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Peach Cobbler",
+          "price": 7.0,
+          "description": "Warm peach dessert with crust.",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Banana Pudding",
+          "price": 6.0,
+          "description": "Creamy banana dessert with wafers.",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Sweet Tea",
+          "price": 3.0,
+          "description": "Classic Southern sweet tea.",
+          "category": "Drinks",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Craft Beer",
+          "price": 7.0,
+          "description": "Local craft beer selection.",
+          "category": "Drinks",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Soda",
+          "price": 2.0,
+          "description": "Variety of soft drinks available.",
+          "category": "Drinks",
+          "source": "openai_knowledge"
+        }
+      ],
+      "item_count": 13,
+      "source": "openai_knowledge",
+      "menu_url": null,
+      "scraped_at": "2026-04-25T13:23:02Z"
+    },
+    "Neptune Oyster|Boston, MA": {
+      "emoji": "🦪",
+      "restaurant": "Neptune Oyster",
+      "city": "Boston, MA",
+      "origin": "Boston, MA",
+      "dest": "Phoenix, AZ",
+      "foodItem": "Wellfleet Oysters (Dozen, Iced)",
+      "menu": [
+        {
+          "name": "Oysters on the Half Shell",
+          "price": 3.5,
+          "description": "Freshly shucked oysters from various coasts",
+          "category": "Appetizers",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Clam Chowder",
+          "price": 9.0,
+          "description": "Creamy New England-style clam chowder",
+          "category": "Soups",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Lobster Roll",
+          "price": 29.0,
+          "description": "Maine lobster with butter on a bun",
+          "category": "Sandwiches",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Fried Clams",
+          "price": 18.0,
+          "description": "Crispy fried whole belly clams",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Seafood Tower",
+          "price": 85.0,
+          "description": "Assorted seafood platter for sharing",
+          "category": "Appetizers",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Grilled Octopus",
+          "price": 22.0,
+          "description": "Tender octopus with lemon and herbs",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Crab Cakes",
+          "price": 24.0,
+          "description": "Pan-seared crab cakes with remoulade",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Fish Tacos",
+          "price": 16.0,
+          "description": "Grilled fish with slaw in tortillas",
+          "category": "Tacos",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Maine Lobster Bisque",
+          "price": 12.0,
+          "description": "Rich and creamy lobster bisque",
+          "category": "Soups",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Chocolate Mousse",
+          "price": 8.0,
+          "description": "Decadent chocolate mousse dessert",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Key Lime Pie",
+          "price": 9.0,
+          "description": "Tangy key lime pie with graham crust",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "White Wine",
+          "price": 10.0,
+          "description": "Selection of crisp white wines",
+          "category": "Drinks",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Craft Beer",
+          "price": 7.0,
+          "description": "Local craft beers on tap",
+          "category": "Drinks",
+          "source": "openai_knowledge"
+        }
+      ],
+      "item_count": 13,
+      "source": "openai_knowledge",
+      "menu_url": null,
+      "scraped_at": "2026-04-25T13:23:17Z"
+    },
+    "Luke's Lobster|Portland, ME": {
+      "emoji": "🦞",
+      "restaurant": "Luke's Lobster",
+      "city": "Portland, ME",
+      "origin": "Portland, ME",
+      "dest": "Las Vegas, NV",
+      "foodItem": "Maine Lobster Roll (Cold)",
+      "menu": [
+        {
+          "name": "Lobster Roll",
+          "price": 22.0,
+          "description": "Fresh lobster meat on a buttered roll",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Crab Roll",
+          "price": 18.0,
+          "description": "Sweet crab meat on a buttered roll",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Shrimp Roll",
+          "price": 16.0,
+          "description": "Juicy shrimp on a toasted roll",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Lobster Bisque",
+          "price": 9.0,
+          "description": "Creamy soup with lobster chunks",
+          "category": "Soups",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Chowder",
+          "price": 8.0,
+          "description": "Rich and hearty clam chowder",
+          "category": "Soups",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Lobster Grilled Cheese",
+          "price": 15.0,
+          "description": "Grilled cheese with lobster filling",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Seafood Salad",
+          "price": 14.0,
+          "description": "Mixed seafood with fresh greens",
+          "category": "Salads",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "French Fries",
+          "price": 5.0,
+          "description": "Crispy golden fries",
+          "category": "Sides",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Coleslaw",
+          "price": 4.0,
+          "description": "Creamy cabbage salad",
+          "category": "Sides",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Lemonade",
+          "price": 3.0,
+          "description": "Refreshing homemade lemonade",
+          "category": "Drinks",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Iced Tea",
+          "price": 3.0,
+          "description": "Chilled brewed tea",
+          "category": "Drinks",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Brownie",
+          "price": 4.0,
+          "description": "Rich chocolate brownie",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Key Lime Pie",
+          "price": 6.0,
+          "description": "Tangy and sweet pie",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        }
+      ],
+      "item_count": 13,
+      "source": "openai_knowledge",
+      "menu_url": null,
+      "scraped_at": "2026-04-25T13:23:37Z"
+    },
+    "Cafe Du Monde|New Orleans, LA": {
+      "emoji": "🥐",
+      "restaurant": "Cafe Du Monde",
+      "city": "New Orleans, LA",
+      "origin": "New Orleans, LA",
+      "dest": "Seattle, WA",
+      "foodItem": "Fresh Beignets & Chicory Coffee",
+      "menu": [
+        {
+          "name": "Beignets",
+          "price": 3.5,
+          "description": "Fried dough covered in powdered sugar.",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Cafe au Lait",
+          "price": 3.0,
+          "description": "Coffee with steamed milk.",
+          "category": "Drinks",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Iced Coffee",
+          "price": 3.5,
+          "description": "Chilled coffee with milk and sugar.",
+          "category": "Drinks",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Hot Chocolate",
+          "price": 3.5,
+          "description": "Rich and creamy chocolate drink.",
+          "category": "Drinks",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "French Market Coffee",
+          "price": 2.5,
+          "description": "Signature blend coffee.",
+          "category": "Drinks",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Milk",
+          "price": 2.0,
+          "description": "Cold glass of milk.",
+          "category": "Drinks",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Orange Juice",
+          "price": 3.0,
+          "description": "Freshly squeezed orange juice.",
+          "category": "Drinks",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Bottled Water",
+          "price": 2.0,
+          "description": "Refreshing bottled water.",
+          "category": "Drinks",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Chicory Coffee",
+          "price": 3.0,
+          "description": "Coffee blended with chicory.",
+          "category": "Drinks",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Beignet Mix",
+          "price": null,
+          "description": "Take-home mix for beignets.",
+          "category": "Souvenirs",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Cafe Du Monde T-Shirt",
+          "price": null,
+          "description": "Branded t-shirt souvenir.",
+          "category": "Souvenirs",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Café au Lait Bowl",
+          "price": null,
+          "description": "Ceramic bowl for coffee.",
+          "category": "Souvenirs",
+          "source": "openai_knowledge"
+        }
+      ],
+      "item_count": 12,
+      "source": "openai_knowledge",
+      "menu_url": "https://shop.cafedumonde.com/cafe/",
+      "scraped_at": "2026-04-25T14:52:48Z"
+    },
+    "Voodoo Doughnut|Portland, OR": {
+      "emoji": "🍩",
+      "restaurant": "Voodoo Doughnut",
+      "city": "Portland, OR",
+      "origin": "Portland, OR",
+      "dest": "Miami, FL",
+      "foodItem": "Magic Dozen Box",
+      "menu": [
+        {
+          "name": "Voodoo Doll Doughnut",
+          "price": 3.5,
+          "description": "Chocolate-covered doughnut shaped like a doll",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Maple Bacon Bar",
+          "price": 3.75,
+          "description": "Maple glaze with crispy bacon on top",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Portland Cream",
+          "price": 3.25,
+          "description": "Custard-filled with chocolate frosting",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Old Dirty Bastard",
+          "price": 3.5,
+          "description": "Chocolate and peanut butter with Oreos",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Grape Ape",
+          "price": 3.5,
+          "description": "Grape-flavored with lavender frosting",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Chocolate Coconut Cake",
+          "price": 3.75,
+          "description": "Chocolate cake with coconut topping",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Dirt Doughnut",
+          "price": 3.0,
+          "description": "Chocolate cake with cookie crumbs",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Raspberry Romeo",
+          "price": 3.25,
+          "description": "Raspberry-filled with pink frosting",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Peanut Butter Banana",
+          "price": 3.5,
+          "description": "Peanut butter glaze with banana slices",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Strawberry Sprinkles",
+          "price": 2.75,
+          "description": "Strawberry glaze with colorful sprinkles",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Coconut Cream",
+          "price": 3.25,
+          "description": "Coconut-filled with whipped cream topping",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "S'mores Doughnut",
+          "price": 3.75,
+          "description": "Chocolate, marshmallow, and graham cracker",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Lemon Chiffon",
+          "price": 3.0,
+          "description": "Lemon-filled with powdered sugar",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Fried Doughnut Holes",
+          "price": 2.5,
+          "description": "Small doughnut holes, perfect for snacking",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        }
+      ],
+      "item_count": 14,
+      "source": "openai_knowledge",
+      "menu_url": null,
+      "scraped_at": "2026-04-25T13:24:06Z"
+    },
+    "The Varsity|Atlanta, GA": {
+      "emoji": "🌭",
+      "restaurant": "The Varsity",
+      "city": "Atlanta, GA",
+      "origin": "Atlanta, GA",
+      "dest": "Boston, MA",
+      "foodItem": "Chili Cheese Dog Combo",
+      "menu": [
+        {
+          "name": "Chili Dog",
+          "price": 3.99,
+          "description": "Classic hot dog topped with chili.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Cheeseburger",
+          "price": 5.49,
+          "description": "Juicy beef patty with melted cheese.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Fried Onion Rings",
+          "price": 3.29,
+          "description": "Crispy battered onion rings.",
+          "category": "Sides",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "French Fries",
+          "price": 2.49,
+          "description": "Golden, crispy French fries.",
+          "category": "Sides",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Varsity Orange",
+          "price": 2.19,
+          "description": "Refreshing orange-flavored drink.",
+          "category": "Drinks",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Frosted Orange",
+          "price": 3.29,
+          "description": "Creamy orange-flavored soft drink.",
+          "category": "Drinks",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Nuggets",
+          "price": 4.99,
+          "description": "Tender chicken nuggets, fried to perfection.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Slaw",
+          "price": 1.99,
+          "description": "Creamy coleslaw side dish.",
+          "category": "Sides",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Peach Pie",
+          "price": 2.99,
+          "description": "Sweet peach filling in flaky crust.",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Chocolate Milkshake",
+          "price": 4.49,
+          "description": "Rich and creamy chocolate shake.",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Hot Dog",
+          "price": 2.99,
+          "description": "Classic grilled hot dog.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Chili Cheese Fries",
+          "price": 4.99,
+          "description": "Fries topped with chili and cheese.",
+          "category": "Sides",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Vanilla Milkshake",
+          "price": 4.49,
+          "description": "Classic vanilla-flavored milkshake.",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Onion Rings with Chili",
+          "price": 4.49,
+          "description": "Onion rings topped with chili.",
+          "category": "Sides",
+          "source": "openai_knowledge"
+        }
+      ],
+      "item_count": 14,
+      "source": "openai_knowledge",
+      "menu_url": "https://thevarsity.com/pages/download-menu?srsltid=AfmBOorGdI-yp_bpYOZcFI2nioKtXWjFJWs3rt46tWzbpRxAxGAt4Pzq",
+      "scraped_at": "2026-04-25T14:52:20Z"
+    },
+    "Cupcake Royale|Seattle, WA": {
+      "emoji": "🧁",
+      "restaurant": "Cupcake Royale",
+      "city": "Seattle, WA",
+      "origin": "Seattle, WA",
+      "dest": "Dallas, TX",
+      "foodItem": "Assorted Hand-piped Cupcakes",
+      "menu": [
+        {
+          "name": "Vanilla Cupcake",
+          "price": 3.5,
+          "description": "Classic vanilla cake with buttercream frosting.",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Chocolate Cupcake",
+          "price": 3.75,
+          "description": "Rich chocolate cake topped with chocolate ganache.",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Red Velvet Cupcake",
+          "price": 4.0,
+          "description": "Moist red velvet cake with cream cheese frosting.",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Lemon Cupcake",
+          "price": 3.5,
+          "description": "Zesty lemon cake with lemon buttercream.",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Salted Caramel Cupcake",
+          "price": 4.25,
+          "description": "Chocolate cake with salted caramel frosting.",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Seasonal Flavor Cupcake",
+          "price": null,
+          "description": "Rotating seasonal flavor offering.",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Mini Cupcake Sampler",
+          "price": 10.0,
+          "description": "Assorted mini cupcakes for tasting.",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Coffee",
+          "price": 2.5,
+          "description": "Freshly brewed coffee, various blends.",
+          "category": "Drinks",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Hot Chocolate",
+          "price": 3.0,
+          "description": "Rich hot chocolate topped with whipped cream.",
+          "category": "Drinks",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Iced Tea",
+          "price": 2.0,
+          "description": "Refreshing iced tea, sweetened or unsweetened.",
+          "category": "Drinks",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Milkshake",
+          "price": 5.0,
+          "description": "Creamy milkshake in various flavors.",
+          "category": "Drinks",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Cupcake Royale Gift Box",
+          "price": 30.0,
+          "description": "Box of assorted cupcakes, perfect for gifts.",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Gluten-Free Cupcake",
+          "price": 4.0,
+          "description": "Delicious gluten-free cupcake option.",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        }
+      ],
+      "item_count": 13,
+      "source": "openai_knowledge",
+      "menu_url": null,
+      "scraped_at": "2026-04-25T14:52:35Z"
+    },
+    "The Halal Guys|New York, NY": {
+      "emoji": "🥙",
+      "restaurant": "The Halal Guys",
+      "city": "New York, NY",
+      "origin": "New York, NY",
+      "dest": "Miami, FL",
+      "foodItem": "Gyro Platter & White Sauce",
+      "menu": [
+        {
+          "name": "Chicken Over Rice",
+          "price": 8.99,
+          "description": "Grilled chicken served over rice.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Beef Gyro Over Rice",
+          "price": 9.99,
+          "description": "Savory beef gyro served over rice.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Falafel Over Rice",
+          "price": 8.49,
+          "description": "Crispy falafel served over rice.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Combo Platter",
+          "price": 10.99,
+          "description": "Chicken and beef gyro over rice.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Hummus",
+          "price": 4.99,
+          "description": "Creamy chickpea dip with pita.",
+          "category": "Sides",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "French Fries",
+          "price": 3.99,
+          "description": "Crispy golden French fries.",
+          "category": "Sides",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Pita Bread",
+          "price": 1.5,
+          "description": "Soft and warm pita bread.",
+          "category": "Sides",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Baklava",
+          "price": 3.5,
+          "description": "Sweet pastry with nuts and honey.",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Soft Drink",
+          "price": 2.5,
+          "description": "Choice of various soft drinks.",
+          "category": "Drinks",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Iced Tea",
+          "price": 2.5,
+          "description": "Refreshing iced tea beverage.",
+          "category": "Drinks",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Hot Sauce",
+          "price": null,
+          "description": "Spicy sauce for extra flavor.",
+          "category": "Condiments",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "White Sauce",
+          "price": null,
+          "description": "Creamy sauce for drizzling.",
+          "category": "Condiments",
+          "source": "openai_knowledge"
+        }
+      ],
+      "item_count": 12,
+      "source": "openai_knowledge",
+      "menu_url": null,
+      "scraped_at": "2026-04-25T13:24:37Z"
+    },
+    "Din Tai Fung|Los Angeles, CA": {
+      "emoji": "🍚",
+      "restaurant": "Din Tai Fung",
+      "city": "Los Angeles, CA",
+      "origin": "Los Angeles, CA",
+      "dest": "Las Vegas, NV",
+      "foodItem": "Pork XLB & Truffle Fried Rice",
+      "menu": [
+        {
+          "name": "Xiao Long Bao",
+          "price": 12.0,
+          "description": "Steamed soup dumplings with pork.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Pork Chop Fried Rice",
+          "price": 14.0,
+          "description": "Fried rice with marinated pork chop.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Vegetable Dumplings",
+          "price": 10.0,
+          "description": "Steamed dumplings filled with vegetables.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Shrimp and Pork Shao Mai",
+          "price": 12.5,
+          "description": "Open-topped dumplings with shrimp and pork.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Spicy Shrimp and Pork Wontons",
+          "price": 11.0,
+          "description": "Wontons in a spicy chili oil sauce.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Edamame",
+          "price": 5.0,
+          "description": "Steamed and lightly salted edamame.",
+          "category": "Sides",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Cucumber Salad",
+          "price": 6.0,
+          "description": "Chilled cucumbers with garlic and vinegar.",
+          "category": "Sides",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Black Sesame Bun",
+          "price": 4.5,
+          "description": "Sweet bun filled with black sesame paste.",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Mango Pudding",
+          "price": 5.5,
+          "description": "Creamy mango dessert with coconut.",
+          "category": "Desserts",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Jasmine Tea",
+          "price": 3.0,
+          "description": "Fragrant tea with jasmine flowers.",
+          "category": "Drinks",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Taiwan Beer",
+          "price": 5.0,
+          "description": "Refreshing beer from Taiwan.",
+          "category": "Drinks",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Soy Milk",
+          "price": 2.5,
+          "description": "Chilled soy milk, a classic drink.",
+          "category": "Drinks",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Pork Dumplings",
+          "price": 10.0,
+          "description": "Steamed dumplings filled with pork.",
+          "category": "Entrees",
+          "source": "openai_knowledge"
+        },
+        {
+          "name": "Chili Oil",
+          "price": null,
+          "description": "Spicy oil for dipping dumplings.",
+          "category": "Sides",
+          "source": "openai_knowledge"
+        }
+      ],
+      "item_count": 14,
+      "source": "openai_knowledge",
+      "menu_url": null,
+      "scraped_at": "2026-04-25T13:24:50Z"
+    }
+  }
+}

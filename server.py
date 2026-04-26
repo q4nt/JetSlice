@@ -1509,6 +1509,93 @@ def api_dispatch_voice():
 
 
 
+@app.route('/api/menu-cache', methods=['GET'])
+def api_menu_cache():
+    """
+    Serve the pre-collected menu cache for all trending emoji restaurants.
+    Returns the full menu_cache.json contents.
+    Query params:
+      - restaurant: (optional) filter by restaurant name (partial match)
+    """
+    cache_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'menu_cache.json')
+
+    if not os.path.exists(cache_file):
+        return jsonify({
+            "error": "Menu cache not built yet. Run: python precollect_menus.py",
+            "status": "not_ready"
+        }), 404
+
+    with open(cache_file, 'r', encoding='utf-8') as f:
+        cache_data = json.load(f)
+
+    # Optional: filter by restaurant name
+    restaurant_filter = request.args.get('restaurant', '').strip().lower()
+    if restaurant_filter:
+        filtered = {}
+        for key, val in cache_data.get('restaurants', {}).items():
+            if restaurant_filter in val.get('restaurant', '').lower():
+                filtered[key] = val
+        if filtered:
+            return jsonify({
+                "status": "success",
+                "filter": restaurant_filter,
+                "results": filtered,
+                "source": "menu_cache.json",
+                "generated_at": cache_data.get('generated_at')
+            })
+        else:
+            return jsonify({
+                "status": "not_found",
+                "filter": restaurant_filter,
+                "message": f"No cached menu found for '{restaurant_filter}'"
+            }), 404
+
+    return jsonify({
+        "status": "success",
+        "source": "menu_cache.json",
+        **cache_data
+    })
+
+
+@app.route('/api/menu', methods=['GET'])
+def api_menu():
+    """
+    Restaurant Menu Scraper Agent Endpoint.
+    Searches for a restaurant and scrapes menu items with prices.
+
+    Query params:
+      - restaurant: restaurant name (required)
+      - city: city/location context (required)
+
+    Returns structured menu data with items, prices, and source metadata.
+    Uses a cascading strategy: SerpAPI Maps -> SerpAPI Search -> Playwright -> OpenAI.
+    """
+    restaurant = request.args.get('restaurant', '').strip()
+    city = request.args.get('city', '').strip()
+
+    if not restaurant:
+        return jsonify({"error": "Missing 'restaurant' parameter"}), 400
+    if not city:
+        return jsonify({"error": "Missing 'city' parameter"}), 400
+
+    from menu_scraper import scrape_restaurant_menu
+
+    print(f"\n[JetSlice] Menu scrape request: {restaurant} in {city}")
+    menu_data = scrape_restaurant_menu(restaurant, city)
+
+    return jsonify({
+        "status": "success",
+        "restaurant": menu_data.get('restaurant', restaurant),
+        "city": city,
+        "menu": menu_data.get('items', []),
+        "item_count": menu_data.get('item_count', 0),
+        "source": menu_data.get('source', 'none'),
+        "menu_url": menu_data.get('menu_url'),
+        "error": menu_data.get('error'),
+        "timestamp": datetime.utcnow().isoformat() + "Z"
+    })
+
+
 @app.route('/api/status', methods=['GET'])
 def api_status():
     """Health check and API status."""
@@ -1526,6 +1613,8 @@ def api_status():
             "GET /api/flights?origin=...&destination=...&date=...",
             "GET /api/southwest?origin=...&destination=...",
             "GET /api/route?origin=...&destination=...&cargo=heated|refrigerated|secure",
+            "GET /api/menu-cache?restaurant=... (pre-collected, instant)",
+            "GET /api/menu?restaurant=...&city=... (live scrape)",
             "GET /api/airports?q=...",
             "GET /api/status",
         ]

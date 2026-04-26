@@ -1,5 +1,6 @@
 const app = {
     activeMissions: 0,
+    jetShareEnabled: false,
     setMissionState(count) {
         this.activeMissions = count;
         if (this.activeMissions === 0) {
@@ -13,24 +14,6 @@ const app = {
     initMap() {
         mapboxgl.accessToken = window.__MAPBOX_TOKEN || 'YOUR_MAPBOX_TOKEN';
         
-        // Render identical static mapbox globe on the mock screen
-        if (document.getElementById('map-mock')) {
-            this.mapMock = new mapboxgl.Map({
-                container: 'map-mock',
-                style: 'mapbox://styles/mapbox/standard',
-                projection: 'globe',
-                zoom: 3.5,
-                center: [-98.5795, 39.8283],
-                pitch: 45,
-                attributionControl: false
-            });
-            this.mapMock.on('style.load', () => {
-                this.mapMock.setConfigProperty('basemap', 'theme', 'monochrome');
-                this.mapMock.setConfigProperty('basemap', 'lightPreset', 'night');
-                this.mapMock.setConfigProperty('basemap', 'show3dObjects', true);
-                this._addUSABoundary(this.mapMock);
-            });
-        }
 
         // Main interactive map instance
         this.map = new mapboxgl.Map({
@@ -257,7 +240,7 @@ const app = {
 
                     document.getElementById('origin').value = props.origin;
                     document.getElementById('destination').value = "350 N Canal, Chicago, IL 60606";
-                    const cargoSelect = document.querySelector('.item-select select');
+                    const cargoSelect = document.querySelector('#active-iphone-simulator .item-select select');
                     for(let i = 0; i < cargoSelect.options.length; i++) {
                         if(cargoSelect.options[i].text.toLowerCase().includes(props.cargo)) {
                             cargoSelect.selectedIndex = i;
@@ -274,19 +257,7 @@ const app = {
                     .setLngLat(feature.geometry.coordinates)
                     .addTo(this.map);
 
-                // Add to static mock screen for aesthetic parity
-                if (this.mapMock) {
-                    const outerClone = document.createElement('div');
-                    outerClone.className = 'emoji-marker-outer';
-                    const elClone = document.createElement('div');
-                    elClone.className = 'emoji-marker';
-                    elClone.textContent = feature.properties.emoji;
-                    outerClone.appendChild(elClone);
-                    
-                    new mapboxgl.Marker({ element: outerClone })
-                        .setLngLat(feature.geometry.coordinates)
-                        .addTo(this.mapMock);
-                }
+
             });
         };
 
@@ -519,6 +490,47 @@ const app = {
     },
 
     /**
+     * Starts a 10-minute countdown for the "Add more to this order" banner
+     */
+    _startAddMoreCountdown() {
+        // Clear any existing countdown
+        if (this._addMoreInterval) { clearInterval(this._addMoreInterval); this._addMoreInterval = null; }
+
+        let remaining = 600; // 10 minutes in seconds
+        const countdownEl = document.getElementById('add-more-countdown');
+        const bannerEl = document.getElementById('add-more-banner');
+        if (!countdownEl || !bannerEl) return;
+
+        // Make sure banner is visible
+        bannerEl.style.display = 'flex';
+        bannerEl.style.opacity = '1';
+
+        const update = () => {
+            const mins = Math.floor(remaining / 60);
+            const secs = remaining % 60;
+            countdownEl.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+
+            // Flash gold when under 2 minutes
+            if (remaining <= 120) {
+                countdownEl.style.color = remaining % 2 === 0 ? '#ff6b35' : 'var(--accent-color)';
+            }
+
+            if (remaining <= 0) {
+                clearInterval(this._addMoreInterval);
+                this._addMoreInterval = null;
+                // Fade out the banner
+                bannerEl.style.transition = 'opacity 0.5s ease, max-height 0.5s ease';
+                bannerEl.style.opacity = '0';
+                setTimeout(() => { bannerEl.style.display = 'none'; }, 500);
+            }
+            remaining--;
+        };
+
+        update(); // initial render
+        this._addMoreInterval = setInterval(update, 1000);
+    },
+
+    /**
      * Navigates to a specific screen ID by toggling the 'active' class
      */
     navigateTo(screenId) {
@@ -545,6 +557,7 @@ const app = {
                  essential: true
              });
              this._initMockDriverAnimation();
+             this._startAddMoreCountdown();
         }
     },
 
@@ -861,26 +874,457 @@ const app = {
         }, 800); // 800ms debounce to conserve external API quotas
     },
 
-    openDispatchModal() {
-        this.fireGoldConfetti();
+    async openDispatchModal() {
+        if (!this.selectedOrderItems || this.selectedOrderItems.length === 0) {
+            alert('Please make sure to add something to the cart before completing your order.');
+            return;
+        }
         
-        const modal = document.getElementById('dispatch-modal');
-        const sheet = modal.querySelector('.dispatch-sheet');
-        if(!modal || !sheet) return;
+        if (!this.selectedOrderItems) this.selectedOrderItems = [];
+        let itemsTotal = this.selectedOrderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        let total = (this.baseDeliveryCost || 0) + itemsTotal;
         
-        modal.classList.remove('hidden');
-        // trigger animation after display block registers
-        setTimeout(() => {
-            modal.style.background = 'rgba(10,10,10,0.7)';
-            sheet.style.transform = 'translateY(0)';
-        }, 10);
+        if (total === 0) total = 2078.00; // fallback demo total if no items
+        
+        const totalFormatted = "$" + total.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2});
+        
+        const logisticsTotalEl = document.getElementById('total-cost-display-2');
+        if (logisticsTotalEl) logisticsTotalEl.textContent = totalFormatted;
+
+        const pickupSheet = document.getElementById('pickup-sheet');
+        if (pickupSheet) pickupSheet.classList.add('hidden');
+        
+        const rmp = document.getElementById('rate-marketplace-panel');
+        if (rmp) {
+            rmp.classList.remove('visible');
+            rmp.classList.add('hidden');
+        }
+        
+        const dpp = document.getElementById('delivery-plan-panel');
+        if (dpp) {
+            dpp.classList.add('active');
+            dpp.style.transition = 'transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.3s ease';
+            dpp.style.boxShadow = '0 0 30px rgba(212, 175, 55, 0.4)';
+            setTimeout(() => {
+                dpp.style.boxShadow = '';
+            }, 600);
+        }
     },
 
-    fireGoldConfetti() {
+    showScheduleView(event) {
+        const rmp = document.getElementById('rate-marketplace-panel');
+        if (rmp) {
+            rmp.classList.remove('hidden');
+            rmp.classList.remove('awaiting');
+            rmp.classList.add('active');
+        }
+    },
+
+    hideScheduleView(event) {
+        const rmp = document.getElementById('rate-marketplace-panel');
+        if (rmp) {
+            rmp.classList.remove('active');
+            rmp.classList.add('hidden');
+        }
+    },
+
+    hideDeliveryPlan() {
+        const panel = document.getElementById('delivery-plan-panel');
+        if (panel) panel.classList.remove('active');
+    },
+
+    /**
+     * Drives the 6-stage mission progress timeline on the tracking screen.
+     * Stages: 0=Pickup, 1=Airport, 2=In Flight, 3=Landing, 4=Transit, 5=Arrived
+     */
+    _startMissionTimeline() {
+        const STAGES = [
+            { label: 'Pickup',    text: 'Courier heading to pickup location' },
+            { label: 'Airport',   text: 'En route to origin airport with your order' },
+            { label: 'In Flight', text: 'Airborne — cargo secured in flight' },
+            { label: 'Landing',   text: 'Aircraft landing at destination city' },
+            { label: 'Transit',   text: 'Last-mile courier en route to your address' },
+            { label: 'Arrived',   text: 'Order delivered — enjoy!' },
+        ];
+        // Timing per stage in ms (demo: each ~8s so you can watch it; real: much longer)
+        const STAGE_DURATIONS = [8000, 8000, 10000, 6000, 8000, 0];
+        const FILL_PCTS = [0, 20, 40, 60, 80, 100];
+
+        if (this._missionTimelineTimer) clearTimeout(this._missionTimelineTimer);
+        let currentStage = 0;
+
+        const applyStage = (stage) => {
+            const fill  = document.getElementById('mission-progress-fill');
+            const text  = document.getElementById('mission-stage-text');
+            const labels = document.querySelectorAll('.ms-label');
+            const dots  = document.querySelectorAll('.ms-dot');
+
+            if (!fill || !text) return;
+
+            fill.style.width = FILL_PCTS[stage] + '%';
+            if (text) text.textContent = STAGES[stage].text;
+
+            labels.forEach((el, i) => {
+                el.classList.remove('active', 'done');
+                if (i < stage) el.classList.add('done');
+                else if (i === stage) el.classList.add('active');
+            });
+            dots.forEach((el, i) => {
+                el.classList.remove('active', 'done');
+                if (i < stage) el.classList.add('done');
+                else if (i === stage) el.classList.add('active');
+            });
+        };
+
+        const advance = () => {
+            applyStage(currentStage);
+            if (currentStage < STAGES.length - 1 && STAGE_DURATIONS[currentStage] > 0) {
+                this._missionTimelineTimer = setTimeout(() => {
+                    currentStage++;
+                    advance();
+                }, STAGE_DURATIONS[currentStage]);
+            }
+        };
+
+        // Kick off immediately from stage 0
+        advance();
+    },
+
+    selectScheduleDate(el) {
+        // Deactivate all chips in same container
+        const chips = el.closest('[id="rmp-date-chips"]') || el.parentElement;
+        chips.querySelectorAll('.rmp-date-chip').forEach(c => c.classList.remove('active'));
+        el.classList.add('active');
+        // Update subtitle
+        const dateLabel = document.getElementById('rmp-selected-date');
+        if (dateLabel) dateLabel.textContent = el.dataset.date || '';
+    },
+
+    selectScheduleTime(el) {
+        // Deactivate all time slots
+        const slots = document.querySelectorAll('.rmp-time-slot');
+        slots.forEach(s => s.classList.remove('selected'));
+        el.classList.add('selected');
+
+        // Update savings bar
+        const price = el.dataset.price || '';
+        const savingsText = document.getElementById('rmp-savings-text');
+        if (savingsText) savingsText.textContent = `Scheduled delivery window locked at ${price}`;
+
+        // Inject plan summary from Delivery Plan Panel
+        const summary = document.getElementById('rmp-plan-summary');
+        if (!summary) return;
+
+        // Clone timeline from DPP
+        const srcTimeline = document.getElementById('dpp-timeline');
+        const srcCost = document.getElementById('dpp-cost-summary');
+        const srcTotal = document.getElementById('dpp-total-cost');
+
+        let html = '';
+
+        if (srcTimeline && srcTimeline.innerHTML.trim()) {
+            html += `<div class="dpp-section-title" style="font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-secondary); font-weight:700; margin:0 0 12px 0;">Route Execution Plan</div>`;
+            html += `<div class="dpp-timeline" style="margin-bottom:20px;">${srcTimeline.innerHTML}</div>`;
+        }
+
+        if (srcCost && srcCost.innerHTML.trim()) {
+            html += `<div class="dpp-section-title" style="font-size:10px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-secondary); font-weight:700; margin:0 0 12px 0;">Cost Analysis</div>`;
+            html += `<div class="dpp-cost-summary" style="margin-bottom:16px;">${srcCost.innerHTML}</div>`;
+        }
+
+        if (srcTotal && srcTotal.textContent.trim()) {
+            const totalCost = srcTotal.textContent.trim();
+            html += `<div style="display:flex; flex-direction:column; align-items:center; gap:4px; padding: 16px 0 4px;">
+                <div style="font-size:9px; color:var(--text-secondary); text-transform:uppercase; letter-spacing:2px;">Scheduled Delivery Cost</div>
+                <div style="font-size:28px; font-weight:700; color:var(--accent-color); font-family:'Inter',sans-serif; letter-spacing:-1px;">${price || totalCost}</div>
+            </div>`;
+        }
+
+        if (html) {
+            summary.innerHTML = html;
+            summary.style.display = 'flex';
+            summary.style.flexDirection = 'column';
+            // Scroll plan into view
+            setTimeout(() => {
+                summary.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 150);
+        }
+    },
+
+    updateItemQuantity(event, name, price, delta) {
+        if (event) event.stopPropagation();
+        
+        if (!this.selectedOrderItems) this.selectedOrderItems = [];
+        
+        let itemNode = null;
+        if (event && event.target) {
+            itemNode = event.target.closest('.menu-item-row');
+        }
+        
+        let item = this.selectedOrderItems.find(i => i.name === name);
+        if (!item) {
+            if (delta > 0) {
+                item = { name, price: price || 0, quantity: 1 };
+                this.selectedOrderItems.push(item);
+            }
+        } else {
+            item.quantity += delta;
+            if (item.quantity <= 0) {
+                const idx = this.selectedOrderItems.indexOf(item);
+                this.selectedOrderItems.splice(idx, 1);
+                item = null;
+            }
+        }
+        
+        // Update UI
+        if (itemNode) {
+            const addBtn = itemNode.querySelector('.add-btn');
+            const activeControls = itemNode.querySelector('.active-qty-controls');
+            const qtyDisplay = itemNode.querySelector('.qty-display');
+            
+            if (item && item.quantity > 0) {
+                itemNode.style.background = 'rgba(212,175,55,0.15)';
+                itemNode.style.border = '1px solid var(--accent-color)';
+                if (addBtn) addBtn.style.display = 'none';
+                if (activeControls) activeControls.style.display = 'flex';
+                if (qtyDisplay) qtyDisplay.textContent = item.quantity;
+            } else {
+                itemNode.style.background = 'rgba(255,255,255,0.05)';
+                itemNode.style.border = '1px solid rgba(255,255,255,0.1)';
+                if (addBtn) addBtn.style.display = 'flex';
+                if (activeControls) activeControls.style.display = 'none';
+            }
+        }
+        
+        this.updateTotalBalance();
+    },
+
+    filterMenuItems(event) {
+        const query = event.target.value.toLowerCase();
+        const container = document.getElementById('pickup-sheet-menu-container');
+        if (!container) return;
+        
+        const items = container.querySelectorAll('.menu-item-row');
+        items.forEach(item => {
+            const name = (item.getAttribute('data-name') || '').toLowerCase();
+            const desc = (item.getAttribute('data-desc') || '').toLowerCase();
+            if (name.includes(query) || desc.includes(query)) {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    },
+
+    updateTotalBalance() {
+        if (!this.selectedOrderItems) this.selectedOrderItems = [];
+        let itemsTotal = this.selectedOrderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        let totalItemsCount = this.selectedOrderItems.reduce((sum, item) => sum + item.quantity, 0);
+        let total = (this.baseDeliveryCost || 0) + itemsTotal;
+        const totalFormatted = "$" + total.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2});
+        
+        const pickupCostEl = document.getElementById('pickup-cost');
+        if (pickupCostEl) pickupCostEl.textContent = totalFormatted;
+        
+        const orderSummaryHeader = document.getElementById('pickup-order-summary-header');
+        const orderCountText = document.getElementById('pickup-order-count-text');
+        if (orderSummaryHeader && orderCountText) {
+            if (totalItemsCount > 0) {
+                orderSummaryHeader.style.display = 'block';
+                orderCountText.textContent = totalItemsCount === 1 ? '1 Item' : `${totalItemsCount} Items`;
+            } else {
+                orderSummaryHeader.style.display = 'none';
+            }
+        }
+        
+        const dispatchTotalEl = document.getElementById('dispatch-total-balance');
+        if (dispatchTotalEl) {
+            if (this.selectedOrderItems.length > 0) {
+                dispatchTotalEl.textContent = `Order Total: ${totalFormatted}`;
+            } else {
+                dispatchTotalEl.textContent = "";
+            }
+        }
+    },
+
+    async loadMenuForPickup(restaurantName, emoji) {
+        const containerEl = document.getElementById('pickup-sheet-menu-container');
+        const searchContainer = document.getElementById('pickup-sheet-search-container');
+        const searchInput = document.getElementById('menu-search-input');
+        
+        if (!containerEl) return;
+        
+        if (searchContainer) searchContainer.style.display = 'none';
+        if (searchInput) searchInput.value = '';
+        
+        containerEl.style.display = 'flex';
+        containerEl.innerHTML = '<div style="text-align:center; padding: 15px; color: var(--accent-color);"><ion-icon name="sync" style="font-size: 24px; animation: spin 1s infinite linear;"></ion-icon><p style="margin-top: 6px; font-size: 11px;">Loading menu...</p></div>';
+        
+        try {
+            let menuItems = [];
+            let fetchSuccess = false;
+
+            try {
+                const staticResponse = await fetch('./menu_cache.json');
+                if (staticResponse.ok) {
+                    const staticData = await staticResponse.json();
+                    if (staticData && staticData.restaurants) {
+                        const filterStr = restaurantName.trim().toLowerCase();
+                        for (const key in staticData.restaurants) {
+                            const val = staticData.restaurants[key];
+                            if (val && val.restaurant && val.restaurant.toLowerCase().includes(filterStr)) {
+                                menuItems = val.menu || [];
+                                fetchSuccess = true;
+                                break;
+                            }
+                        }
+                        if (!fetchSuccess) fetchSuccess = true;
+                    }
+                }
+            } catch (err) {
+                console.warn("Static JSON fetch failed for pickup, trying API...", err);
+            }
+
+            if (!fetchSuccess) {
+                const response = await fetch(`/api/menu-cache?restaurant=${encodeURIComponent(restaurantName)}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.status === 'success' && data.results) {
+                        const firstMatchKey = Object.keys(data.results)[0];
+                        menuItems = data.results[firstMatchKey]?.menu || [];
+                        fetchSuccess = true;
+                    }
+                }
+            }
+            
+            if (fetchSuccess) {
+                if (menuItems.length > 0) {
+                    let html = '';
+                    menuItems.forEach(item => {
+                        let priceStr = 'Market Price';
+                        if (typeof item.price === 'number') {
+                            priceStr = `$${item.price.toFixed(2)}`;
+                        } else if (item.price) {
+                            priceStr = `$${item.price}`;
+                        }
+                        
+                        let itemEmoji = emoji || '🍽️';
+                        const n = (item.name || '').toLowerCase();
+                        const d = (item.description || '').toLowerCase();
+                        const combined = n + ' ' + d;
+                        
+                        if (combined.includes('grilled cheese')) itemEmoji = '🥪';
+                        else if (combined.includes('crab')) itemEmoji = '🦀';
+                        else if (combined.includes('lobster')) itemEmoji = '🦞';
+                        else if (combined.includes('shrimp') || combined.includes('prawn')) itemEmoji = '🍤';
+                        else if (combined.includes('octopus') || combined.includes('squid') || combined.includes('calamari')) itemEmoji = '🐙';
+                        else if (combined.includes('fish') || combined.includes('mahi') || combined.includes('salmon')) itemEmoji = '🐟';
+                        else if (combined.includes('oyster') || combined.includes('clam')) itemEmoji = '🦪';
+                        else if (combined.includes('burger') || combined.includes('cheeseburger') || combined.includes('slider')) itemEmoji = '🍔';
+                        else if (combined.includes('chicken') || combined.includes('nugget') || combined.includes('wings')) itemEmoji = '🍗';
+                        else if (combined.includes('pork') || combined.includes('carnitas') || combined.includes('bacon')) itemEmoji = '🥓';
+                        else if (combined.includes('brisket') || combined.includes('ribs')) itemEmoji = '🍖';
+                        else if (combined.includes('sausage') || combined.includes('hot dog') || combined.includes('chili dog')) itemEmoji = '🌭';
+                        else if (combined.includes('taco')) itemEmoji = '🌮';
+                        else if (combined.includes('pizza')) itemEmoji = '🍕';
+                        else if (combined.includes('salad') || combined.includes('slaw')) itemEmoji = '🥗';
+                        else if (combined.includes('roll') || combined.includes('bun') || combined.includes('bread') || combined.includes('sandwich')) itemEmoji = '🥪';
+                        else if (combined.includes('soup') || combined.includes('bisque') || combined.includes('chowder') || combined.includes('gumbo') || combined.includes('bowl')) itemEmoji = '🥣';
+                        else if (combined.includes('fries') || combined.includes('potato')) itemEmoji = '🍟';
+                        else if (combined.includes('mac') && combined.includes('cheese') || combined.includes('queso')) itemEmoji = '🧀';
+                        else if (combined.includes('corn')) itemEmoji = '🌽';
+                        else if (combined.includes('onion')) itemEmoji = '🧅';
+                        else if (combined.includes('cake') || combined.includes('brownie')) itemEmoji = '🍰';
+                        else if (combined.includes('pie') || combined.includes('cobbler')) itemEmoji = '🥧';
+                        else if (combined.includes('cookie')) itemEmoji = '🍪';
+                        else if (combined.includes('doughnut') || combined.includes('beignet') || combined.includes('donut')) itemEmoji = '🍩';
+                        else if (combined.includes('ice cream') || combined.includes('milkshake')) itemEmoji = '🥤';
+                        else if (combined.includes('wine')) itemEmoji = '🍷';
+                        else if (combined.includes('beer')) itemEmoji = '🍺';
+                        else if (combined.includes('coffee') || combined.includes('lait') || combined.includes('espresso')) itemEmoji = '☕';
+                        else if (combined.includes('tea')) itemEmoji = '🍵';
+                        else if (combined.includes('juice') || combined.includes('lemonade') || combined.includes('coke') || combined.includes('soda') || combined.includes('orange')) itemEmoji = '🥤';
+                        else if (combined.includes('water')) itemEmoji = '💧';
+                        else if (combined.includes('fruit') || combined.includes('apple')) itemEmoji = '🍎';
+                        else if (combined.includes('avocado')) itemEmoji = '🥑';
+                        else if (combined.includes('t-shirt') || combined.includes('shirt') || combined.includes('apparel')) itemEmoji = '👕';
+                        
+                        const safeName = (item.name || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                        const safeDesc = (item.description || item.category || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                        const itemPrice = typeof item.price === 'number' ? item.price : 0;
+                        
+                        const ratingScore = 4.0 + ((item.name || '').length % 11) / 10;
+                        const fullStars = Math.floor(ratingScore);
+                        const hasHalfStar = (ratingScore - fullStars) >= 0.5;
+                        let starsHtml = '';
+                        for(let i=0; i<5; i++) {
+                            if (i < fullStars) {
+                                starsHtml += '<ion-icon name="star" style="color: #ecc354; font-size: 10px;"></ion-icon>';
+                            } else if (i === fullStars && hasHalfStar) {
+                                starsHtml += '<ion-icon name="star-half" style="color: #ecc354; font-size: 10px;"></ion-icon>';
+                            } else {
+                                starsHtml += '<ion-icon name="star-outline" style="color: #ecc354; font-size: 10px;"></ion-icon>';
+                            }
+                        }
+
+                        html += `
+                            <div class="menu-item-row" data-name="${safeName}" data-desc="${safeDesc}" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px; display: flex; justify-content: space-between; align-items: center; transition: background 0.2s; width: 100%; box-sizing: border-box;">
+                                <div style="display: flex; align-items: center; flex: 1; padding-right: 12px; min-width: 0; cursor: pointer;" onclick="app.updateItemQuantity(event, '${safeName}', ${itemPrice}, 1)">
+                                    <span style="font-size: 20px; margin-right: 12px; flex-shrink: 0; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">${itemEmoji}</span>
+                                    <div style="min-width: 0;">
+                                        <h4 style="margin: 0 0 4px 0; font-size: 14px; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.name}</h4>
+                                        <div style="display: flex; align-items: center; margin-bottom: 4px;">
+                                            ${starsHtml}
+                                            <span style="color: #888; font-size: 10px; margin-left: 6px;">(${Math.floor(ratingScore * 23 + (item.name || '').length)})</span>
+                                        </div>
+                                        <p style="margin: 0; font-size: 11px; color: var(--text-secondary); line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${item.description || item.category || ''}</p>
+                                    </div>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 12px; flex-shrink: 0;">
+                                    <span style="color: var(--accent-color); font-weight: 600; font-size: 13px;">${priceStr}</span>
+                                    <div class="qty-control" style="display: flex; align-items: center;">
+                                        <div class="add-btn shimmer-circle-btn" onclick="app.updateItemQuantity(event, '${safeName}', ${itemPrice}, 1)">
+                                            <ion-icon name="arrow-up-outline"></ion-icon>
+                                        </div>
+                                        <div class="active-qty-controls" style="display: none; align-items: center; background: rgba(212,175,55,0.15); border: 1px solid var(--accent-color); border-radius: 20px; padding: 2px 6px;">
+                                            <div style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; cursor: pointer;" onclick="app.updateItemQuantity(event, '${safeName}', ${itemPrice}, -1)">
+                                                <ion-icon name="remove" style="color: white; font-size: 14px;"></ion-icon>
+                                            </div>
+                                            <span class="qty-display" style="color: white; font-weight: 600; font-size: 13px; width: 16px; text-align: center;">1</span>
+                                            <div style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; cursor: pointer;" onclick="app.updateItemQuantity(event, '${safeName}', ${itemPrice}, 1)">
+                                                <ion-icon name="add" style="color: white; font-size: 14px;"></ion-icon>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    containerEl.innerHTML = html;
+                    if (searchContainer) searchContainer.style.display = 'block';
+                } else {
+                    containerEl.innerHTML = '<div style="padding: 10px; text-align: center; color: var(--text-secondary); font-size: 12px;">No menu items found.</div>';
+                }
+            } else {
+                containerEl.innerHTML = '<div style="padding: 10px; text-align: center; color: #ff3b30; font-size: 12px;">Menu not available at this time.</div>';
+            }
+        } catch (err) {
+            console.error('Menu fetch error:', err);
+            containerEl.innerHTML = '<div style="padding: 10px; text-align: center; color: #ff3b30; font-size: 12px;">Error loading menu.</div>';
+        }
+    },
+
+    fireGoldConfetti(targetElementId = null) {
         const colors = ['#d4af37', '#fcecba', '#aa8c2c', '#ffffff'];
         
-        const activeIphone = document.querySelector('#active-iphone-simulator') || document.querySelector('.iphone-mockup');
-        if (!activeIphone) return;
+        let targetEl = null;
+        if (targetElementId) {
+            targetEl = document.getElementById(targetElementId);
+        }
+        if (!targetEl) {
+            targetEl = document.querySelector('#active-iphone-simulator') || document.querySelector('.iphone-mockup');
+        }
+        if (!targetEl) return;
 
         for (let i = 0; i < 60; i++) {
             const confetti = document.createElement('div');
@@ -893,7 +1337,7 @@ const app = {
             confetti.style.zIndex = '99999';
             confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
             confetti.style.pointerEvents = 'none';
-            activeIphone.appendChild(confetti);
+            targetEl.appendChild(confetti);
 
             // Snow-like physics
             let vx = Math.random() * 2 - 1; // Slight horizontal drift
@@ -947,18 +1391,44 @@ const app = {
         }, 400); // match css transition speed
     },
 
-    async simulateAIDispatch() {
-        const statusIcon = document.getElementById('ai-dispatch-status');
-        if(!statusIcon) return;
+    async simulateAIDispatch(itemName = null) {
+        if (!itemName || typeof itemName === 'object') {
+            if (this.selectedOrderItems && this.selectedOrderItems.length > 0) {
+                itemName = this.selectedOrderItems.map(i => `${i.quantity}x ${i.name}`).join(' and ');
+            } else {
+                const restaurantEl = document.getElementById('pickup-restaurant');
+                const restaurantName = restaurantEl ? restaurantEl.innerText : "";
+                itemName = restaurantName ? "an order from " + restaurantName : "a VIP order";
+            }
+        }
+        
+        const modal = document.getElementById('dispatch-modal');
+        const sheet = modal ? modal.querySelector('.dispatch-sheet') : null;
+        if (modal && sheet) {
+            modal.classList.remove('hidden');
+            modal.style.background = 'rgba(10,10,10,0.7)';
+            sheet.style.transform = 'translateY(0)';
+        }
+
+        const titleEl = document.getElementById('dispatch-modal-title');
+        if (titleEl) titleEl.innerText = 'Initializing Mission';
+        
+        const modalContent = document.getElementById('dispatch-modal-content');
+        if (modalContent) {
+            modalContent.innerHTML = `
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; text-align: center;">
+                    <div style="width: 80px; height: 80px; border-radius: 50%; background: radial-gradient(circle, rgba(212,175,55,0.2) 0%, transparent 70%); margin-bottom: 20px; display: flex; align-items: center; justify-content: center;">
+                        <ion-icon name="pulse" style="font-size: 40px; color: var(--accent-color); animation: pulseOrb 2s infinite;"></ion-icon>
+                    </div>
+                    <h4 style="margin: 0 0 8px 0; font-size: 18px; color: white;">Connecting AI Agent...</h4>
+                    <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">Negotiating voice bridge for ${itemName}</p>
+                </div>
+            `;
+        }
         
         // Block closing during transaction
         const closeBtn = document.querySelector('#dispatch-modal .dispatch-sheet ion-icon[name="close-circle"]');
         if(closeBtn) closeBtn.style.pointerEvents = 'none';
-        
-        statusIcon.innerHTML = `<span class="btn-loader" style="width:20px;height:20px;border-width:2px;border-color:var(--accent-color);border-top-color:transparent;"></span>`;
-        
-        const textP = document.querySelector('#dispatch-modal p');
-        if(textP) textP.textContent = "Negotiating voice bridge...";
 
         try {
             // Hit the Bland AI backend bridge
@@ -967,7 +1437,7 @@ const app = {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     phone: '+15550198273',
-                    instructions: 'Call the restaurant and secure the luxury payload.'
+                    instructions: `Call the restaurant and secure ${itemName}.`
                 })
             });
             const res = await req.json();
@@ -991,7 +1461,7 @@ const app = {
             const conversation = [
                 { type: 'ai', text: 'Initiating secure outbound line to target restaurant...' },
                 { type: 'human', text: 'Hello, how can I help you?' },
-                { type: 'ai', text: 'I am a JetSlice digital concierge placing a VIP order for John Doe.' },
+                { type: 'ai', text: `I am a JetSlice digital concierge placing an order for ${itemName}.` },
                 { type: 'human', text: 'Okay, the order is confirmed and will be ready in 15 minutes.' },
                 { type: 'ai', text: 'Payment injected via virtual proxy. Logistics confirmed.' }
             ];
@@ -1036,8 +1506,16 @@ const app = {
 
         } catch (e) {
             console.error("AI Dispatch Error", e);
-            if(textP) textP.textContent = "AI Proxy bridge failed. Retrying...";
-            statusIcon.innerHTML = `<ion-icon name="warning" style="color:red; font-size: 24px;"></ion-icon>`;
+            const modalContent = document.getElementById('dispatch-modal-content');
+            if (modalContent) {
+                modalContent.innerHTML = `
+                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; text-align: center; color: #ff3b30;">
+                        <ion-icon name="warning" style="font-size: 40px; margin-bottom: 12px;"></ion-icon>
+                        <h4 style="margin: 0 0 8px 0; font-size: 18px;">AI Proxy Failed</h4>
+                        <p style="margin: 0; font-size: 13px;">Unable to negotiate voice bridge.</p>
+                    </div>
+                `;
+            }
             if(closeBtn) closeBtn.style.pointerEvents = 'auto';
         }
     },
@@ -1092,10 +1570,28 @@ const app = {
                         <h4 style="margin: 4px 0 0; font-size: 20px; color: #34c759;">$450</h4>
                     </div>
                 </div>
-                <button onclick="document.getElementById('jetshare-overlay').remove()" style="background: var(--accent-color); color: black; border: none; padding: 14px 100%; width: 100%; border-radius: 20px; font-weight: 600; cursor: pointer; font-size: 15px;">Accept Flight Splice</button>
+                <button onclick="document.getElementById('jetshare-overlay').remove()" style="background: var(--accent-color); color: black; border: none; padding: 14px 24px; width: 100%; border-radius: 20px; font-weight: 600; cursor: pointer; font-size: 15px; box-sizing: border-box;">Accept Flight Splice</button>
             </div>
         `;
-        document.getElementById('app-container').appendChild(overlay);
+        const appCont = document.querySelector('#active-iphone-simulator .app-container');
+        if (appCont) appCont.appendChild(overlay);
+    },
+
+    /**
+     * Toggles the JetShare Matching feature on/off from Profile settings
+     */
+    toggleJetShare(toggleEl) {
+        this.jetShareEnabled = !this.jetShareEnabled;
+        const knob = toggleEl.querySelector('div');
+        if (this.jetShareEnabled) {
+            toggleEl.style.backgroundColor = '#d4af37';
+            knob.style.transform = 'translateX(18px)';
+            console.log('[JetSlice] JetShare Matching enabled');
+        } else {
+            toggleEl.style.backgroundColor = '#333';
+            knob.style.transform = 'translateX(0)';
+            console.log('[JetSlice] JetShare Matching disabled');
+        }
     },
 
     triggerVoiceConcierge() {
@@ -1408,7 +1904,7 @@ const app = {
         }
 
         // Set pending UI states
-        const orderBtnSpan = document.querySelector('.order-now-btn span');
+        const orderBtnSpan = document.querySelector('#active-iphone-simulator .order-now-btn span');
         if (orderBtnSpan) orderBtnSpan.innerHTML = 'Calculating Batch<span class="loading-dots">...</span>';
         
         document.getElementById('pickup-cost').textContent = '...';
@@ -1450,7 +1946,7 @@ const app = {
         const origin = document.getElementById('origin').value.trim();
         const dest = document.getElementById('destination').value.trim();
         const warnTag = document.getElementById('dist-warn');
-        const cargoSelect = document.getElementById('cargo-select') || document.querySelector('.item-select select');
+        const cargoSelect = document.getElementById('cargo-select') || document.querySelector('#active-iphone-simulator .item-select select');
         const dateInput = document.getElementById('delivery-date');
         const btn = document.getElementById('active-iphone-simulator').querySelector('.booking-card .primary-btn');
 
@@ -1482,6 +1978,9 @@ const app = {
         btn.innerHTML = '<span class="btn-loader"></span> Calculating...';
         btn.disabled = true;
         warnTag.style.display = 'none';
+
+        // Show centered loading overlay with flying airplane
+        this._showRouteLoadingOverlay();
 
         const dateVal = dateInput && dateInput.value ? dateInput.value : '';
         const dateParam = dateVal ? `&date=${encodeURIComponent(dateVal)}` : '';
@@ -1723,28 +2222,27 @@ const app = {
                     document.getElementById('pickup-eta').innerHTML = `<ion-icon name="time-outline" style="vertical-align: middle;"></ion-icon> <span style="color: var(--accent-color); font-weight: 600;">${etaDisplay}</span>`;
                     
                     if (data && data.total_cost) {
-                        document.getElementById('pickup-cost').textContent = "$" + Math.floor(data.total_cost).toLocaleString();
+                        this.baseDeliveryCost = Math.floor(data.total_cost);
                     } else {
                         let rate = cargoType === 'secure' ? 4.00 : 2.50;
                         const finalPrice = dist * rate;
-                        document.getElementById('pickup-cost').textContent = "$" + Math.floor(finalPrice).toLocaleString();
+                        this.baseDeliveryCost = Math.floor(finalPrice);
                     }
+                    
+                    this.selectedOrderItems = [];
+                    this.updateTotalBalance();
                     
                     const pickupBar = document.getElementById('pickup-sheet');
                     if (pickupBar) pickupBar.classList.remove('hidden');
 
-                    // Show ratings header panel
-                    if (ratings) {
-                        document.getElementById('rh-yelp').innerHTML = `<img src="Yelp_Logo.svg.png" style="height: 24px; vertical-align: middle; margin-right: 6px; border-radius: 4px; background: rgba(255,255,255,0.95); padding: 2px; box-shadow: 0 2px 4px rgba(0,0,0,0.5);"> ` + ratings.yelp;
-                        document.getElementById('rh-uber').innerHTML = `<img src="uber eats.jpeg" style="height: 24px; vertical-align: middle; margin-right: 6px; border-radius: 4px; background: rgba(255,255,255,0.95); padding: 2px; box-shadow: 0 2px 4px rgba(0,0,0,0.5);"> ` + ratings.uberEats;
-                        document.getElementById('rh-reddit').innerHTML = `<img src="reddit.png" style="height: 24px; vertical-align: middle; margin-right: 6px; border-radius: 4px; background: rgba(255,255,255,0.95); padding: 2px; box-shadow: 0 2px 4px rgba(0,0,0,0.5);"> ` + ratings.reddit;
-                        const ratingsHeader = document.getElementById('ratings-header');
-                        if (ratingsHeader) ratingsHeader.classList.remove('hidden');
-                    }
+                    // Load menu items directly into the pickup sheet
+                    this.loadMenuForPickup(restaurantName, emoji);
 
-                    // Show fractional jet hitchhiking modal randomly
+
+
+                    // Show fractional jet hitchhiking modal (only if user enabled in Profile)
                     setTimeout(() => {
-                        if (Math.random() > 0.4) {
+                        if (app.jetShareEnabled && Math.random() > 0.4) {
                             app.triggerHitchhikeModal();
                         }
                     }, 4500);
@@ -1787,6 +2285,8 @@ const app = {
                     });
                 }
             }
+            // Dismiss the loading overlay on success
+            this._hideRouteLoadingOverlay();
         } catch (err) {
             console.error('[JetSlice] Route API error:', err);
             warnTag.querySelector('span').textContent = 'Server unavailable. Please try again.';
@@ -1799,6 +2299,207 @@ const app = {
             
             btn.innerHTML = 'Calculate Logistics <ion-icon name="arrow-forward-outline"></ion-icon>';
             btn.disabled = false;
+            // Dismiss the loading overlay on error
+            this._hideRouteLoadingOverlay();
+        }
+    },
+
+    /**
+     * Shows a centered loading overlay on the map:
+     *  Phase 1 (0-2s): Flying airplane icon with "Loading" text
+     *  Phase 1 (0-2s): Flying airplane icon with "Loading" text
+     *  Phase 2+:       Cycles through fun emojis with steaming "Loading" words
+     */
+    _showRouteLoadingOverlay() {
+        // Remove any existing overlay
+        this._hideRouteLoadingOverlay();
+
+        const sim = document.getElementById('active-iphone-simulator');
+        if (!sim) return;
+
+        const overlay = document.createElement('div');
+        overlay.id = 'route-loading-overlay';
+        overlay.style.cssText = `
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 500; pointer-events: none;
+        `;
+
+        // Phase 1: Flying airplane
+        overlay.innerHTML = `
+            <div id="loading-phase1" style="display: flex; flex-direction: column; align-items: center; animation: fadeIn 0.3s ease;">
+                <div style="font-size: 48px; animation: flyBounce 1.2s ease-in-out infinite;">
+                    <ion-icon name="airplane" style="color: var(--accent-color); filter: drop-shadow(0 4px 12px rgba(212,175,55,0.5));"></ion-icon>
+                </div>
+                <div style="margin-top: 12px; font-size: 13px; color: rgba(255,255,255,0.8); font-weight: 600; letter-spacing: 2px; text-transform: uppercase; text-shadow: 0 2px 8px rgba(0,0,0,0.8);">Loading</div>
+            </div>
+            <div id="loading-emoji-phase" style="display: none; flex-direction: column; align-items: center; position: relative;">
+                <div style="position: relative; width: 120px; height: 120px;">
+                    <div id="loading-text-zone"></div>
+                    <div id="loading-emoji-char" style="position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); font-size: 52px; filter: drop-shadow(0 4px 16px rgba(0,0,0,0.6)); transition: transform 0.3s ease, opacity 0.3s ease;">
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const mapContainer = sim.querySelector('#map') || sim.querySelector('.app-container');
+        if (mapContainer) {
+            mapContainer.style.position = 'relative';
+            mapContainer.appendChild(overlay);
+        }
+
+        // Emoji rotation pool with type tags (HTML entities for source-code safety)
+        const emojiPool = [
+            { html: '&#127829;',  type: 'pizza' },
+            { html: '&#128104;&#8205;&#127859;', type: 'chef' },
+            { html: '&#128640;',  type: 'rocket' },
+            { html: '&#127758;',  type: 'globe' },
+            { html: '&#127828;',  type: 'burger' },
+            { html: '&#127870;',  type: 'champagne' },
+            { html: '&#127843;',  type: 'sushi' },
+            { html: '&#9992;&#65039;',  type: 'airplane' },
+            { html: '&#128230;',  type: 'package' },
+            { html: '&#127860;',  type: 'forkknife' },
+        ];
+        let emojiIdx = 0;
+
+        /**
+         * Returns themed loading-text HTML for each emoji type.
+         * Each type uses its own CSS animation class defined in style.css
+         */
+        const getThemedTextHTML = (type) => {
+            const word = 'Loading';
+            switch (type) {
+                case 'pizza':
+                    // Steam rising from hot pizza
+                    return `<div class="steam-word" style="--i:0;">${word}</div>
+                            <div class="steam-word" style="--i:1;">${word}</div>
+                            <div class="steam-word" style="--i:2;">${word}</div>
+                            <div class="steam-word" style="--i:3;">${word}</div>`;
+
+                case 'rocket':
+                    // Jet exhaust blasting downward like fire
+                    return `<div class="exhaust-word" style="--i:0;">${word}</div>
+                            <div class="exhaust-word" style="--i:1;">${word}</div>
+                            <div class="exhaust-word" style="--i:2;">${word}</div>
+                            <div class="exhaust-word" style="--i:3;">${word}</div>
+                            <div class="exhaust-word" style="--i:4;">${word}</div>`;
+
+                case 'champagne':
+                    // Fizz bubbles floating upward
+                    return `<div class="fizz-word" style="--i:0;">${word}</div>
+                            <div class="fizz-word" style="--i:1;">${word}</div>
+                            <div class="fizz-word" style="--i:2;">${word}</div>
+                            <div class="fizz-word" style="--i:3;">${word}</div>`;
+
+                case 'globe':
+                    // Text orbiting around the globe
+                    return `<div class="orbit-word" style="--i:0;">${word}</div>
+                            <div class="orbit-word" style="--i:1;">${word}</div>
+                            <div class="orbit-word" style="--i:2;">${word}</div>
+                            <div class="orbit-word" style="--i:3;">${word}</div>`;
+
+                case 'burger':
+                    // Cheese/sauce dripping down
+                    return `<div class="drip-word" style="--i:0;">${word}</div>
+                            <div class="drip-word" style="--i:1;">${word}</div>
+                            <div class="drip-word" style="--i:2;">${word}</div>
+                            <div class="drip-word" style="--i:3;">${word}</div>`;
+
+                case 'sushi':
+                    // Chopsticks sliding in from both sides
+                    return `<div class="chopstick-word-left" style="--i:0;">Load</div>
+                            <div class="chopstick-word-right" style="--i:0;">ing</div>
+                            <div class="chopstick-word-left" style="--i:1;">Load</div>
+                            <div class="chopstick-word-right" style="--i:1;">ing</div>`;
+
+                case 'airplane':
+                    // Contrail / skywriting trailing behind
+                    return `<div class="contrail-word" style="--i:0;">${word}</div>
+                            <div class="contrail-word" style="--i:1;">${word}</div>
+                            <div class="contrail-word" style="--i:2;">${word}</div>`;
+
+                case 'package':
+                    // Text popping up like unboxing
+                    return `<div class="unbox-word" style="--i:0;">${word}</div>
+                            <div class="unbox-word" style="--i:1;">${word}</div>
+                            <div class="unbox-word" style="--i:2;">${word}</div>
+                            <div class="unbox-word" style="--i:3;">${word}</div>`;
+
+                case 'forkknife':
+                    // Text carved / etched stroke-by-stroke
+                    return `<div class="carve-word" style="--i:0;">${word}</div>
+                            <div class="carve-word" style="--i:1;">${word}</div>
+                            <div class="carve-word" style="--i:2;">${word}</div>`;
+
+                case 'chef':
+                    // Letters chopped in one-by-one
+                    return `<div class="chop-word-container">${
+                        word.split('').map((ch, ci) =>
+                            `<span class="chop-letter" style="animation-delay:${ci * 0.18}s;">${ch}</span>`
+                        ).join('')
+                    }</div>`;
+
+                default:
+                    return `<div class="steam-word" style="--i:0;">${word}</div>
+                            <div class="steam-word" style="--i:1;">${word}</div>
+                            <div class="steam-word" style="--i:2;">${word}</div>`;
+            }
+        };
+
+        /** Apply themed text for a given emoji index */
+        const applyThemedText = (idx) => {
+            const zone = document.getElementById('loading-text-zone');
+            if (!zone) return;
+            zone.innerHTML = getThemedTextHTML(emojiPool[idx].type);
+        };
+
+        // Phase 2: After 2s, swap airplane for first emoji + themed text
+        this._loadingPhaseTimer = setTimeout(() => {
+            const p1 = document.getElementById('loading-phase1');
+            const emojiPhase = document.getElementById('loading-emoji-phase');
+            const emojiChar = document.getElementById('loading-emoji-char');
+            if (!p1 || !emojiPhase || !emojiChar) return;
+
+            // Fade out airplane
+            p1.style.animation = 'fadeIn 0.3s ease reverse';
+            setTimeout(() => {
+                p1.style.display = 'none';
+                emojiChar.innerHTML = emojiPool[0].html;
+                applyThemedText(0);
+                emojiPhase.style.display = 'flex';
+                emojiPhase.style.animation = 'fadeIn 0.4s ease';
+            }, 280);
+
+            // Cycle emojis every 2 seconds with matching themed text
+            this._emojiCycleInterval = setInterval(() => {
+                emojiIdx = (emojiIdx + 1) % emojiPool.length;
+                const el = document.getElementById('loading-emoji-char');
+                if (!el) { clearInterval(this._emojiCycleInterval); return; }
+                // Quick scale-down, swap emoji + text, scale-up
+                el.style.transform = 'translateX(-50%) scale(0.3)';
+                el.style.opacity = '0';
+                setTimeout(() => {
+                    el.innerHTML = emojiPool[emojiIdx].html;
+                    applyThemedText(emojiIdx);
+                    el.style.transform = 'translateX(-50%) scale(1)';
+                    el.style.opacity = '1';
+                }, 300);
+            }, 2000);
+        }, 2000);
+    },
+
+    /**
+     * Removes the route loading overlay and cleans up timers
+     */
+    _hideRouteLoadingOverlay() {
+        if (this._loadingPhaseTimer) { clearTimeout(this._loadingPhaseTimer); this._loadingPhaseTimer = null; }
+        if (this._emojiCycleInterval) { clearInterval(this._emojiCycleInterval); this._emojiCycleInterval = null; }
+        const overlay = document.getElementById('route-loading-overlay');
+        if (overlay) {
+            overlay.style.transition = 'opacity 0.4s ease';
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.remove(), 400);
         }
     },
 
@@ -1806,8 +2507,8 @@ const app = {
      * Dynamically fills the logistics screen with API data
      */
     _populateLogistics(data) {
-        const timeline = document.querySelector('.logistics-timeline');
-        const totalCard = document.querySelector('.total-cost-card');
+        const timeline = document.querySelector('#active-iphone-simulator .logistics-timeline');
+        const totalCard = document.querySelector('#active-iphone-simulator .total-cost-card');
 
         // Build timeline items from legs
         let html = '';
@@ -1935,17 +2636,261 @@ const app = {
      * Starts the tracking simulation screen
      */
     startMission() {
-        this.navigateTo('tracking-screen');
-        if (this.map) {
-            this.map.flyTo({
-                center: [-118.2437, 34.0522], // Fly to LA/Beverly Hills
-                zoom: 11,
-                pitch: 60,
-                bearing: -20,
-                duration: 5000,
-                essential: true
-            });
+        this.fireGoldConfetti();
+        this._startMissionTimeline();
+        
+        if (!this.map) {
+            // Fallback if no map - just navigate directly
+            this.navigateTo('tracking-screen');
+            return;
         }
+
+        const oCoords = this._activeOriginCoords;
+        const dCoords = this._activeDestCoords;
+
+        if (!oCoords || !dCoords) {
+            // No route data, just navigate
+            this.navigateTo('tracking-screen');
+            return;
+        }
+
+        // ------------------------------------------------------------------
+        // Step 1: Close the delivery plan panel and show the globe
+        // ------------------------------------------------------------------
+        const dppPanel = document.getElementById('delivery-plan-panel');
+        if (dppPanel) dppPanel.classList.remove('active');
+        const rmpPanel = document.getElementById('rate-marketplace-panel');
+        if (rmpPanel) rmpPanel.classList.remove('active');
+
+        // Make sure we're on the home screen so the map is visible
+        const sim = document.getElementById('active-iphone-simulator');
+        if (sim) {
+            sim.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            const homeScreen = document.getElementById('home-screen');
+            if (homeScreen) homeScreen.classList.add('active');
+        }
+
+        // Hide booking card, hero, AI panel + pills, bottom nav so globe is fully visible
+        const bookingCard = sim ? sim.querySelector('.booking-card') : null;
+        const heroSection = sim ? sim.querySelector('.hero-section') : null;
+        const appHeader = sim ? sim.querySelector('#home-screen .app-header') : null;
+        const aiWrapper = sim ? sim.querySelector('.ai-command-wrapper') : null;
+        const pickupSheet = document.getElementById('pickup-sheet');
+        const bottomNav = sim ? sim.querySelector('.bottom-nav') : null;
+        const ratingsHeader = document.getElementById('ratings-header');
+        if (bookingCard) bookingCard.style.display = 'none';
+        if (heroSection) heroSection.style.display = 'none';
+        if (appHeader) appHeader.style.display = 'none';
+        if (aiWrapper) aiWrapper.style.display = 'none';
+        if (pickupSheet) pickupSheet.classList.add('hidden');
+        if (bottomNav) bottomNav.style.display = 'none';
+        if (ratingsHeader) ratingsHeader.classList.add('hidden');
+
+        // ------------------------------------------------------------------
+        // Step 2: Clean up any existing route layers/markers
+        // ------------------------------------------------------------------
+        if (this._routeAnimId) { cancelAnimationFrame(this._routeAnimId); this._routeAnimId = null; }
+        if (this._flyingMarker) { this._flyingMarker.remove(); this._flyingMarker = null; }
+        if (this._missionAnimId) { cancelAnimationFrame(this._missionAnimId); this._missionAnimId = null; }
+        // Clean up original route layers from calculateLogistics
+        ['route-dashed', 'route-solid', 'route-solid-glow', 'route-plane'].forEach(id => {
+            try { if (this.map.getLayer(id)) this.map.removeLayer(id); } catch(e) {}
+        });
+        ['route-source', 'route-trail-source', 'route-plane-source'].forEach(id => {
+            try { if (this.map.getSource(id)) this.map.removeSource(id); } catch(e) {}
+        });
+        // Clean up mission layers from any previous mission
+        ['mission-route-dashed', 'mission-route-solid', 'mission-route-glow'].forEach(id => {
+            try { if (this.map.getLayer(id)) this.map.removeLayer(id); } catch(e) {}
+        });
+        ['mission-route-source', 'mission-trail-source'].forEach(id => {
+            try { if (this.map.getSource(id)) this.map.removeSource(id); } catch(e) {}
+        });
+        if (this._missionFlyingMarker) { this._missionFlyingMarker.remove(); this._missionFlyingMarker = null; }
+        // Also remove any emoji markers left on the map from the trending orders
+        document.getElementById('active-iphone-simulator').querySelectorAll('.emoji-marker-outer').forEach(m => m.style.display = 'none');
+
+        // ------------------------------------------------------------------
+        // Step 3: Fly to center of the route at globe level
+        // ------------------------------------------------------------------
+        const midLng = (oCoords[0] + dCoords[0]) / 2;
+        const midLat = (oCoords[1] + dCoords[1]) / 2;
+
+        this.map.flyTo({
+            center: [midLng, midLat],
+            zoom: 3.2,
+            pitch: 25,
+            bearing: 0,
+            duration: 2000,
+            essential: true
+        });
+
+        // ------------------------------------------------------------------
+        // Step 4: Once the globe settles, draw the route and animate
+        // ------------------------------------------------------------------
+        this.map.once('moveend', () => {
+            const arcPoints = this._greatCircleArc(oCoords, dCoords, 120);
+
+            // Full route: dashed gold line
+            const routeGeoJSON = {
+                'type': 'Feature',
+                'geometry': { 'type': 'LineString', 'coordinates': arcPoints }
+            };
+
+            this.map.addSource('mission-route-source', { 'type': 'geojson', 'data': routeGeoJSON });
+            this.map.addLayer({
+                'id': 'mission-route-dashed',
+                'type': 'line',
+                'source': 'mission-route-source',
+                'layout': { 'line-join': 'round', 'line-cap': 'round' },
+                'paint': {
+                    'line-color': '#d4af37',
+                    'line-width': 3,
+                    'line-dasharray': [2, 3],
+                    'line-opacity': 0.6,
+                    'line-emissive-strength': 1
+                }
+            });
+
+            // Solid trail that fills in behind the emoji
+            this.map.addSource('mission-trail-source', {
+                'type': 'geojson',
+                'data': { 'type': 'Feature', 'geometry': { 'type': 'LineString', 'coordinates': [arcPoints[0], arcPoints[0]] } }
+            });
+            // Glow behind the solid trail
+            this.map.addLayer({
+                'id': 'mission-route-glow',
+                'type': 'line',
+                'source': 'mission-trail-source',
+                'layout': { 'line-join': 'round', 'line-cap': 'round' },
+                'paint': {
+                    'line-color': '#d4af37',
+                    'line-width': 14,
+                    'line-opacity': 0.15,
+                    'line-blur': 6,
+                    'line-emissive-strength': 1
+                }
+            });
+            this.map.addLayer({
+                'id': 'mission-route-solid',
+                'type': 'line',
+                'source': 'mission-trail-source',
+                'layout': { 'line-join': 'round', 'line-cap': 'round' },
+                'paint': {
+                    'line-color': '#d4af37',
+                    'line-width': 4,
+                    'line-emissive-strength': 1
+                }
+            });
+
+            // Create origin pin (gold pulsing dot)
+            const originEl = document.createElement('div');
+            originEl.style.cssText = 'width:14px; height:14px; background:#d4af37; border-radius:50%; border:2px solid #000; box-shadow: 0 0 12px rgba(212,175,55,0.6); animation: pulse 1.5s infinite;';
+            const originMarker = new mapboxgl.Marker({ element: originEl }).setLngLat(oCoords).addTo(this.map);
+
+            // Create destination pin
+            const destEl = document.createElement('div');
+            destEl.style.cssText = 'width:14px; height:14px; background:#ef4444; border-radius:50%; border:2px solid #000; box-shadow: 0 0 12px rgba(239,68,68,0.6);';
+            const destMarker = new mapboxgl.Marker({ element: destEl }).setLngLat(dCoords).addTo(this.map);
+
+            // Create the flying food emoji
+            const emojiChar = this._activeEmoji || '\u2708';
+            const flyEl = document.createElement('div');
+            flyEl.className = 'emoji-marker flying-emoji';
+            flyEl.textContent = emojiChar;
+            flyEl.style.cssText = 'font-size:36px; pointer-events:none; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.7)); transition: none;';
+            this._missionFlyingMarker = new mapboxgl.Marker({ element: flyEl })
+                .setLngLat(arcPoints[0])
+                .addTo(this.map);
+
+            // ------------------------------------------------------------------
+            // Step 5: Animate the emoji along the arc
+            // ------------------------------------------------------------------
+            let progress = 0;
+            const animSpeed = 0.006; // fraction per frame (~3 sec total)
+            const map = this.map;
+            const shimmerStart = performance.now();
+
+            const animateEmoji = () => {
+                progress += animSpeed;
+                if (progress > 1) progress = 1;
+
+                const idx = Math.min(Math.floor(progress * (arcPoints.length - 1)), arcPoints.length - 1);
+                const currentPoint = arcPoints[idx];
+                this._missionFlyingMarker.setLngLat(currentPoint);
+
+                // Update the solid trail
+                const trailSlice = arcPoints.slice(0, idx + 1);
+                if (trailSlice.length >= 2) {
+                    map.getSource('mission-trail-source').setData({
+                        'type': 'Feature',
+                        'geometry': { 'type': 'LineString', 'coordinates': trailSlice }
+                    });
+                }
+
+                // Shimmer the trail
+                const elapsed = performance.now() - shimmerStart;
+                const sw = 4 + Math.sin(elapsed * 0.006) * 1.2;
+                const gw = 14 + Math.sin(elapsed * 0.004) * 4;
+                try {
+                    map.setPaintProperty('mission-route-solid', 'line-width', sw);
+                    map.setPaintProperty('mission-route-glow', 'line-width', gw);
+                    map.setPaintProperty('mission-route-glow', 'line-opacity', 0.12 + Math.sin(elapsed * 0.005) * 0.06);
+                } catch(e) {}
+
+                if (progress < 1) {
+                    this._missionAnimId = requestAnimationFrame(animateEmoji);
+                } else {
+                    // ------------------------------------------------------------------
+                    // Step 6: Emoji arrived! Burst celebration at destination
+                    // ------------------------------------------------------------------
+                    this._burstCelebration(dCoords);
+
+                    // After a brief moment, zoom into origin (courier's location)
+                    setTimeout(() => {
+                        // Clean up mission route layers
+                        this._missionFlyingMarker.remove();
+                        this._missionFlyingMarker = null;
+                        originMarker.remove();
+                        destMarker.remove();
+                        ['mission-route-dashed', 'mission-route-solid', 'mission-route-glow'].forEach(id => {
+                            try { if (map.getLayer(id)) map.removeLayer(id); } catch(e) {}
+                        });
+                        ['mission-route-source', 'mission-trail-source'].forEach(id => {
+                            try { if (map.getSource(id)) map.removeSource(id); } catch(e) {}
+                        });
+
+                        // Zoom into the origin (courier pickup location)
+                        map.flyTo({
+                            center: oCoords,
+                            zoom: 14,
+                            pitch: 60,
+                            bearing: -30,
+                            duration: 3000,
+                            essential: true
+                        });
+
+                        // Navigate to tracking screen once the zoom finishes
+                        map.once('moveend', () => {
+                            // Restore hidden UI elements for the tracking screen
+                            const sim = document.getElementById('active-iphone-simulator');
+                            if (sim) {
+                                const nav = sim.querySelector('.bottom-nav');
+                                const aiWrap = sim.querySelector('.ai-command-wrapper');
+                                if (nav) nav.style.display = '';
+                                if (aiWrap) aiWrap.style.display = '';
+                            }
+                            this.navigateTo('tracking-screen');
+                        });
+                    }, 1800);
+                }
+            };
+
+            // Small delay so the route visually appears before the emoji starts moving
+            setTimeout(() => {
+                this._missionAnimId = requestAnimationFrame(animateEmoji);
+            }, 600);
+        });
     },
 
     /**
@@ -1970,7 +2915,7 @@ const app = {
      * Simulates an AI agent calling the restaurant to place a pickup order
      */
     aiCallPickup() {
-        const btn = document.querySelector('.pickup-btn.ai-call');
+        const btn = document.querySelector('#active-iphone-simulator .pickup-btn.ai-call');
         const textEl = btn.querySelector('.pickup-btn-text span');
         const strongEl = btn.querySelector('.pickup-btn-text strong');
         const origStrong = strongEl.textContent;
@@ -2351,9 +3296,9 @@ const app = {
 
         if (!panel) return;
 
-        // Transition panel to active state
+        // Transition panel to populated state (but don't slide in yet)
         panel.classList.remove('awaiting');
-        panel.classList.add('active');
+        // panel.classList.add('active'); // Added when Order Now is clicked
         awaiting.style.display = 'none';
         active.style.display = 'block';
         dispatchBtn.disabled = false;
@@ -2833,10 +3778,10 @@ const app = {
         if (!panel) return;
 
         panel.classList.remove('awaiting');
-        panel.classList.add('active');
-        awaiting.style.display = 'none';
-        active.style.display = 'block';
-        bookBtn.disabled = false;
+        // panel.classList.add('active'); // Added when Schedule Instead is clicked
+        if (awaiting) awaiting.style.display = 'none';
+        if (active) active.style.display = 'block';
+        if (bookBtn) bookBtn.disabled = false;
 
         // Parse airport codes from origin/dest
         const airportMap = {
@@ -2912,13 +3857,36 @@ const app = {
             const topRides = deliveryOptions.filter(r => r.name.includes('Black') || r.name.includes('Lux'));
             const ride = topRides[Math.floor(Math.random() * topRides.length)];
 
+            // Normalize departure time: backend sends ISO (departure_time), fallback sends "6:15 AM" (dept)
+            let deptStr = f.dept || '';
+            if (!deptStr && f.departure_time) {
+                try {
+                    const dt = new Date(f.departure_time);
+                    deptStr = dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                } catch(e) { deptStr = '8:00 AM'; }
+            }
+            if (!deptStr) deptStr = '8:00 AM';
+
+            // Also normalize missing fields from backend flight objects
+            if (!f.dept) f.dept = deptStr;
+            if (!f.airline && f.airline_name) f.airline = f.airline_name;
+            if (f.stops === undefined) f.stops = 0;
+            if (!f.cabin) f.cabin = 'Economy';
+            if (!f.color) f.color = '#666';
+            if (!f.price && f.price_economy) f.price = f.price_economy;
+
             // Parse flight departure time (e.g. "6:15 AM", "12:30 PM")
-            const timeParts = f.dept.match(/(\d+):(\d+)\s+(AM|PM)/i);
-            let hours = parseInt(timeParts[1]);
-            const minutes = parseInt(timeParts[2]);
-            const ampm = timeParts[3].toUpperCase();
-            if (ampm === 'PM' && hours < 12) hours += 12;
-            if (ampm === 'AM' && hours === 12) hours = 0;
+            const timeParts = deptStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+            let hours, minutes;
+            if (timeParts) {
+                hours = parseInt(timeParts[1]);
+                minutes = parseInt(timeParts[2]);
+                const ampm = timeParts[3].toUpperCase();
+                if (ampm === 'PM' && hours < 12) hours += 12;
+                if (ampm === 'AM' && hours === 12) hours = 0;
+            } else {
+                hours = 8; minutes = 0;
+            }
 
             const deptDate = new Date(now);
             deptDate.setHours(hours, minutes, 0, 0);
@@ -3030,6 +3998,122 @@ const app = {
     },
 
     /**
+     * Slides the Rate Marketplace (Schedule) panel into view
+     */
+    showScheduleView(event) {
+        // Find the rate marketplace panel within the same phone mockup as the caller
+        let panel = null;
+        if (event && event.target) {
+            const phone = event.target.closest('.iphone-mockup');
+            if (phone) {
+                panel = phone.querySelector('.rate-marketplace-panel');
+                // If not in same phone, check the next sibling phone (pres gallery layout)
+                if (!panel) {
+                    const nextPhone = phone.nextElementSibling;
+                    if (nextPhone && nextPhone.classList.contains('iphone-mockup')) {
+                        panel = nextPhone.querySelector('.rate-marketplace-panel');
+                        if (panel) {
+                            // For pres gallery, scroll to the sibling phone
+                            nextPhone.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'center' });
+                        }
+                    }
+                }
+            }
+        }
+        // Fallback to the production rate-marketplace-panel
+        if (!panel) panel = document.getElementById('rate-marketplace-panel');
+        if (panel) {
+            panel.classList.remove('awaiting');
+            panel.classList.remove('hidden');
+            panel.classList.add('active');
+            console.log('[JetSlice] Schedule view opened');
+        }
+    },
+
+    /**
+     * Slides the Rate Marketplace (Schedule) panel out of view
+     */
+    hideScheduleView() {
+        const panel = document.getElementById('rate-marketplace-panel');
+        if (panel) {
+            panel.classList.remove('active');
+            console.log('[JetSlice] Schedule view closed');
+        }
+    },
+
+    /**
+     * Slides the Delivery Plan panel out of view (back arrow)
+     */
+    hideDeliveryPlan() {
+        const panel = document.getElementById('delivery-plan-panel');
+        if (panel) {
+            panel.classList.remove('active');
+            console.log('[JetSlice] Delivery Plan view closed');
+        }
+    },
+
+    /**
+     * Tip button on the Delivery Plan Panel footer - shows gold thank you then disappears
+     */
+    addDppTip(event, el) {
+        if (event) event.stopPropagation();
+        // Replace the button content with a gold thank you message
+        el.innerHTML = '<span style="font-size: 12px; color: #d4af37; font-weight: 700; letter-spacing: 0.5px;">Thank you!</span>';
+        el.style.border = '1px solid rgba(212,175,55,0.5)';
+        el.style.background = 'rgba(212,175,55,0.12)';
+        el.style.pointerEvents = 'none';
+
+        // Also add the + TIP indicator next to total cost
+        const costEl = el.previousElementSibling;
+        if (costEl && !costEl.querySelector('.tip-added-label')) {
+            const tipLabel = document.createElement('span');
+            tipLabel.className = 'tip-added-label';
+            tipLabel.style.cssText = 'color: #d4af37; font-size: 12px; font-weight: 600; margin-left: 6px;';
+            tipLabel.textContent = '+ TIP';
+            costEl.appendChild(tipLabel);
+        }
+
+        // Fade out and disappear after 2 seconds
+        setTimeout(() => {
+            el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            el.style.opacity = '0';
+            el.style.transform = 'scale(0.8)';
+            setTimeout(() => {
+                el.style.display = 'none';
+            }, 500);
+        }, 2000);
+    },
+
+    /**
+     * Tip button on the Tracking screen courier card - shows gold thank you then disappears
+     */
+    tipCourier(event) {
+        // Find the button that was clicked
+        let btn = null;
+        if (event && event.currentTarget) {
+            btn = event.currentTarget;
+        } else if (event && event.target) {
+            btn = event.target.closest('button');
+        }
+        if (!btn) btn = document.getElementById('tip-btn');
+        if (!btn) return;
+        btn.innerHTML = '<span style="font-size: 13px; color: #d4af37; font-weight: 700;">Thank you!</span>';
+        btn.style.border = '1px solid rgba(212,175,55,0.5)';
+        btn.style.background = 'rgba(212,175,55,0.15)';
+        btn.style.pointerEvents = 'none';
+
+        // Fade out and disappear after 2 seconds
+        setTimeout(() => {
+            btn.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            btn.style.opacity = '0';
+            btn.style.transform = 'scale(0.8)';
+            setTimeout(() => {
+                btn.style.display = 'none';
+            }, 500);
+        }, 2000);
+    },
+
+    /**
      * Resets the Rate Marketplace panel to awaiting state
      */
     _resetRateMarketplace() {
@@ -3075,7 +4159,7 @@ function bootJetSlice() {
 
     // Global click listener to hide autocomplete popup when clicking outside
     document.addEventListener('click', (event) => {
-        const popup = document.querySelector('.autocomplete-popup-container');
+        const popup = document.querySelector('#active-iphone-simulator .autocomplete-popup-container');
         const cmdField = document.getElementById('cmdField');
         if (popup && !popup.classList.contains('hidden')) {
             if (!popup.contains(event.target) && event.target !== cmdField) {

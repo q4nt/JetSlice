@@ -36,45 +36,44 @@ body {
     color: var(--text-primary);
     font-family: 'Inter', sans-serif;
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    justify-content: flex-start;
     align-items: center;
+    padding: 30px 0 60px;
     min-height: 100vh;
-    gap: 40px;
 }
 
-/* --- Background Icons --- */
-.background-icons {
-    position: absolute;
-    top: 0px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    gap: 30px;
-    z-index: 0;
-    opacity: 0.8;
+.prod-screen {
+    position: absolute !important;
+    top: 0;
+    left: 0;
+    width: 100% !important;
+    height: 100% !important;
+    transform: translateX(100%);
+    transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1) !important;
+    z-index: 100;
+    background: rgba(14, 15, 20, 0.98) !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding-top: 50px !important;
+    box-sizing: border-box !important;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
 }
-.mock-app-icon {
-    height: 120px;
-    width: 120px;
-    background: linear-gradient(145deg, #2a2d36, #1a1c23);
-    border-radius: 28px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.8), 0 0 20px rgba(212, 175, 55, 0.15), inset 0 2px 4px rgba(255,255,255,0.1);
-    transition: transform 0.3s ease, filter 0.3s ease, box-shadow 0.3s ease;
+.prod-screen::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
 }
-.mock-app-icon ion-icon {
-    font-size: 66px;
-    color: var(--accent-color);
-    filter: drop-shadow(0 4px 10px rgba(212, 175, 55, 0.4));
+.prod-screen.active {
+    transform: translateX(0) !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
 }
-.mock-app-icon:hover {
-    transform: scale(1.05) translateY(-5px);
-    filter: brightness(1.2);
-    z-index: 10;
-    box-shadow: 0 15px 50px rgba(0,0,0,0.9), 0 0 30px rgba(212, 175, 55, 0.3), inset 0 2px 4px rgba(255,255,255,0.2);
+/* Rate Marketplace slides on top of Delivery Plan */
+.rate-marketplace-panel.prod-screen {
+    z-index: 110;
 }
+
+
 
 /* --- iPhone Mockup Container --- */
 .iphone-mockup {
@@ -411,6 +410,33 @@ body {
 .primary-btn:active {
     transform: scale(0.98);
 }
+
+.shimmer-circle-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    background: linear-gradient(110deg, #d4af37 20%, #fcecba 45%, #fcecba 55%, #d4af37 80%);
+    background-size: 200% 100%;
+    animation: goldShimmer 3.5s infinite linear;
+    box-shadow: inset 0 2px 0 rgba(255,255,255,0.6), 0 4px 12px rgba(212,175,55,0.4);
+    transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+.shimmer-circle-btn:hover {
+    transform: scale(1.05);
+    box-shadow: inset 0 2px 0 rgba(255,255,255,0.6), 0 6px 16px rgba(212,175,55,0.6);
+}
+.shimmer-circle-btn:active {
+    transform: scale(0.95);
+}
+.shimmer-circle-btn ion-icon {
+    color: #000 !important;
+    font-size: 16px;
+    font-weight: 700;
+}
 .primary-btn.glow {
     box-shadow: 0 0 20px var(--accent-glow);
 }
@@ -734,7 +760,7 @@ body {
 .pickup-bar-inner {
     display: flex;
     align-items: center;
-    background: rgba(16, 17, 22, 0.94);
+    background: #000;
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border: 1px solid rgba(212, 175, 55, 0.2);
@@ -743,6 +769,7 @@ body {
     box-shadow: 0 8px 32px rgba(0,0,0,0.6);
     cursor: pointer;
     transition: border-color 0.2s ease;
+    box-sizing: border-box;
 }
 .pickup-bar-inner:hover {
     border-color: rgba(212, 175, 55, 0.4);
@@ -977,6 +1004,305 @@ body {
 @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes sound { 0% { height: 3px; } 50% { height: 14px; } 100% { height: 3px; } }
 
+/* Route loading overlay animations */
+@keyframes flyBounce {
+    0%, 100% { transform: translateY(0) rotate(-5deg); }
+    50% { transform: translateY(-12px) rotate(5deg); }
+}
+
+/* ---- BASE: shared loading-text container ---- */
+.loading-text-container {
+    position: relative;
+    width: 120px;
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ====== PIZZA  - Classic Steam Rising ====== */
+@keyframes steamRise {
+    0% { opacity: 0.9; transform: translateY(0) translateX(var(--sx, 0px)) scale(0.7); }
+    40% { opacity: 0.7; }
+    100% { opacity: 0; transform: translateY(-65px) translateX(var(--ex, 8px)) scale(0.4); }
+}
+.steam-word {
+    position: absolute;
+    bottom: 34px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 9px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.7);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    text-shadow: 0 1px 6px rgba(0,0,0,0.5);
+    pointer-events: none;
+    animation: steamRise 2.2s ease-out infinite;
+    animation-delay: calc(var(--i) * 0.5s);
+    --sx: calc((var(--i) - 1.5) * 8px);
+    --ex: calc((var(--i) - 1.5) * 14px);
+}
+
+/* ====== ROCKET  - Jet Exhaust Blast (text shoots DOWN like fire) ====== */
+@keyframes exhaustBlast {
+    0% { opacity: 0; transform: translateY(0) translateX(var(--ex-x, 0px)) scale(1); }
+    15% { opacity: 1; }
+    100% { opacity: 0; transform: translateY(80px) translateX(var(--ex-drift, 5px)) scale(0.3); filter: blur(2px); }
+}
+.exhaust-word {
+    position: absolute;
+    top: 52px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    pointer-events: none;
+    animation: exhaustBlast 1.6s ease-in infinite;
+    animation-delay: calc(var(--i) * 0.35s);
+    --ex-x: calc((var(--i) - 1.5) * 6px);
+    --ex-drift: calc((var(--i) - 1.5) * 12px);
+    background: linear-gradient(180deg, #ffcc00 0%, #ff6600 40%, #ff2200 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+    filter: drop-shadow(0 2px 6px rgba(255,100,0,0.6));
+}
+
+/* ====== CHAMPAGNE  - Fizz Bubbles Rising ====== */
+@keyframes fizzBubble {
+    0% { opacity: 0; transform: translateY(10px) translateX(var(--bx, 0px)) scale(0.5); }
+    20% { opacity: 1; transform: translateY(0) scale(0.9); }
+    60% { opacity: 0.8; transform: translateY(-30px) translateX(calc(var(--bx) * 1.5)) scale(1.1); }
+    100% { opacity: 0; transform: translateY(-70px) translateX(calc(var(--bx) * 2)) scale(0.3); }
+}
+.fizz-word {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 8px;
+    font-weight: 700;
+    color: rgba(255, 215, 0, 0.85);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    pointer-events: none;
+    animation: fizzBubble 2.8s ease-out infinite;
+    animation-delay: calc(var(--i) * 0.6s);
+    --bx: calc((var(--i) - 1.5) * 10px);
+    text-shadow: 0 0 8px rgba(255,215,0,0.4);
+}
+.fizz-word::before {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    height: 4px;
+    background: rgba(255,215,0,0.6);
+    border-radius: 50%;
+    box-shadow: 0 0 4px rgba(255,215,0,0.4);
+}
+
+/* ====== GLOBE  - Orbital Text ====== */
+@keyframes orbitSpin {
+    0% { transform: rotate(0deg) translateX(38px) rotate(0deg); opacity: 0.8; }
+    50% { opacity: 1; }
+    100% { transform: rotate(360deg) translateX(38px) rotate(-360deg); opacity: 0.8; }
+}
+.orbit-word {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    margin-top: -6px;
+    margin-left: -18px;
+    font-size: 8px;
+    font-weight: 700;
+    color: rgba(100, 200, 255, 0.9);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    pointer-events: none;
+    animation: orbitSpin 3s linear infinite;
+    animation-delay: calc(var(--i) * 0.75s);
+    text-shadow: 0 0 6px rgba(100,200,255,0.5);
+}
+
+/* ====== BURGER  - Cheese Drip ====== */
+@keyframes cheeseDrip {
+    0% { opacity: 0; transform: translateY(-8px) scaleY(0.3); }
+    15% { opacity: 1; transform: translateY(0) scaleY(1); }
+    60% { opacity: 0.9; transform: translateY(25px) scaleY(1.6) scaleX(0.85); }
+    80% { opacity: 0.4; transform: translateY(45px) scaleY(2) scaleX(0.6); }
+    100% { opacity: 0; transform: translateY(60px) scaleY(2.2) scaleX(0.4); }
+}
+.drip-word {
+    position: absolute;
+    top: 46px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    pointer-events: none;
+    color: #ffcc33;
+    text-shadow: 0 2px 4px rgba(255,180,0,0.5);
+    animation: cheeseDrip 2.5s ease-in infinite;
+    animation-delay: calc(var(--i) * 0.5s);
+    transform-origin: top center;
+}
+
+/* ====== SUSHI  - Chopstick Slide-In ====== */
+@keyframes chopstickLeft {
+    0% { opacity: 0; transform: translateX(-50px); }
+    30% { opacity: 1; transform: translateX(-2px); }
+    50% { opacity: 1; transform: translateX(0); }
+    80% { opacity: 0.5; transform: translateX(-3px); }
+    100% { opacity: 0; transform: translateX(-50px); }
+}
+@keyframes chopstickRight {
+    0% { opacity: 0; transform: translateX(50px); }
+    30% { opacity: 1; transform: translateX(2px); }
+    50% { opacity: 1; transform: translateX(0); }
+    80% { opacity: 0.5; transform: translateX(3px); }
+    100% { opacity: 0; transform: translateX(50px); }
+}
+.chopstick-word-left {
+    position: absolute;
+    bottom: 28px;
+    left: 50%;
+    margin-left: -30px;
+    font-size: 9px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.8);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    pointer-events: none;
+    animation: chopstickLeft 2.4s ease-in-out infinite;
+    animation-delay: calc(var(--i) * 1.2s);
+    text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+}
+.chopstick-word-right {
+    position: absolute;
+    bottom: 18px;
+    left: 50%;
+    margin-left: -30px;
+    font-size: 9px;
+    font-weight: 700;
+    color: rgba(255,200,150,0.8);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    pointer-events: none;
+    animation: chopstickRight 2.4s ease-in-out infinite;
+    animation-delay: calc(var(--i) * 1.2s);
+    text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+}
+
+/* ====== AIRPLANE  - Contrail / Skywriting ====== */
+@keyframes contrailWrite {
+    0% { opacity: 0; transform: translateX(-40px) scaleX(0.2); filter: blur(3px); }
+    30% { opacity: 1; transform: translateX(0) scaleX(1); filter: blur(0); }
+    70% { opacity: 0.8; transform: translateX(0) scaleX(1); filter: blur(0); }
+    100% { opacity: 0; transform: translateX(0) scaleX(1); filter: blur(4px); }
+}
+.contrail-word {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 9px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.75);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    pointer-events: none;
+    animation: contrailWrite 2.8s ease-out infinite;
+    animation-delay: calc(var(--i) * 0.6s);
+    text-shadow: 0 0 12px rgba(255,255,255,0.3);
+}
+
+/* ====== PACKAGE  - Unbox Pop ====== */
+@keyframes unboxPop {
+    0% { opacity: 0; transform: translateY(20px) scale(0.3) rotateX(40deg); }
+    30% { opacity: 1; transform: translateY(-5px) scale(1.15) rotateX(-5deg); }
+    50% { opacity: 1; transform: translateY(-15px) scale(1) rotateX(0); }
+    70% { opacity: 0.6; transform: translateY(-30px) scale(0.8); }
+    100% { opacity: 0; transform: translateY(-50px) scale(0.4); }
+}
+.unbox-word {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 9px;
+    font-weight: 700;
+    color: rgba(200,170,120,0.9);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    pointer-events: none;
+    animation: unboxPop 2s ease-out infinite;
+    animation-delay: calc(var(--i) * 0.45s);
+    text-shadow: 0 2px 6px rgba(160,120,60,0.5);
+}
+
+/* ====== FORK & KNIFE  - Carve / Etch Stroke ====== */
+@keyframes carveStroke {
+    0% { opacity: 0; transform: scaleX(0); filter: blur(2px); }
+    20% { opacity: 0.5; transform: scaleX(0.5); filter: blur(1px); }
+    50% { opacity: 1; transform: scaleX(1); filter: blur(0); }
+    80% { opacity: 0.6; transform: scaleX(1); }
+    100% { opacity: 0; transform: scaleX(0.8); filter: blur(2px); }
+}
+.carve-word {
+    position: absolute;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 9px;
+    font-weight: 700;
+    color: rgba(192,192,192,0.85);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    pointer-events: none;
+    transform-origin: left center;
+    animation: carveStroke 2.2s ease-in-out infinite;
+    animation-delay: calc(var(--i) * 0.5s);
+    text-shadow: 0 0 3px rgba(212,175,55,0.4);
+    border-bottom: 1px solid rgba(212,175,55,0.3);
+    padding-bottom: 2px;
+}
+
+/* ====== CHEF  - Knife Chop (letters appear one-by-one) ====== */
+@keyframes chopReveal {
+    0% { opacity: 0; transform: translateY(-10px) rotate(-15deg); }
+    15% { opacity: 1; transform: translateY(2px) rotate(2deg); }
+    30% { transform: translateY(0) rotate(0); }
+    80% { opacity: 1; }
+    100% { opacity: 0; transform: translateY(-5px); }
+}
+.chop-letter {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 800;
+    color: rgba(255,255,255,0.85);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    animation: chopReveal 2s ease-out infinite;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+}
+.chop-word-container {
+    position: absolute;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    pointer-events: none;
+}
+
 body.light-theme {
     --bg-color: #f7f7f8;
     --surface-color: #ffffff;
@@ -1002,18 +1328,15 @@ body.light-theme {
 
 /* ====== DELIVERY PLAN PANEL (Desktop Sidebar) ====== */
 .delivery-plan-panel {
-    width: 420px;
-    height: 844px;
+    width: 100%;
+    height: 100%;
     background: rgba(14, 15, 20, 0.96);
-    border: 1px solid rgba(212, 175, 55, 0.15);
-    border-radius: 24px;
+    border: none;
+    border-radius: 0;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    box-shadow:
-        0 0 0 1px rgba(255,255,255,0.04),
-        0 20px 60px rgba(0,0,0,0.6),
-        0 0 80px rgba(212, 175, 55, 0.06);
+    box-shadow: none;
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     position: relative;
@@ -1071,6 +1394,10 @@ body.light-theme {
 @keyframes pulseDot {
     0%, 100% { opacity: 1; transform: scale(1); }
     50% { opacity: 0.4; transform: scale(0.7); }
+}
+@keyframes pulse {
+    0%, 100% { box-shadow: 0 0 6px rgba(212,175,55,0.4); transform: scale(1); }
+    50% { box-shadow: 0 0 18px rgba(212,175,55,0.9); transform: scale(1.3); }
 }
 .dpp-route-label {
     font-size: 13px;
@@ -1492,18 +1819,15 @@ body.light-theme {
 
 /* ====== RATE MARKETPLACE PANEL ====== */
 .rate-marketplace-panel {
-    width: 420px;
-    height: 844px;
+    width: 100%;
+    height: 100%;
     background: rgba(14, 15, 20, 0.96);
-    border: 1px solid rgba(212, 175, 55, 0.15);
-    border-radius: 24px;
+    border: none;
+    border-radius: 0;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    box-shadow:
-        0 0 0 1px rgba(255,255,255,0.04),
-        0 20px 60px rgba(0,0,0,0.6),
-        0 0 80px rgba(212, 175, 55, 0.06);
+    box-shadow: none;
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     font-family: 'Inter', sans-serif;
@@ -2072,3 +2396,111 @@ body.no-active-mission .re-orders-list .curated-item ion-icon {
     height: 16px;
 }
 
+/* ====== SCHEDULE PANEL: DATE CHIPS ====== */
+.rmp-date-chip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 58px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+.rmp-date-chip:hover {
+    background: rgba(255,255,255,0.09);
+    border-color: rgba(255,255,255,0.2);
+}
+.rmp-date-chip.active {
+    background: rgba(212,175,55,0.15);
+    border-color: var(--accent-color);
+    box-shadow: 0 4px 14px rgba(212,175,55,0.2);
+}
+.rdc-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+    font-weight: 700;
+    margin-bottom: 5px;
+}
+.rmp-date-chip.active .rdc-label {
+    color: var(--accent-color);
+}
+.rdc-day {
+    font-size: 20px;
+    font-weight: 700;
+    color: #fff;
+    font-family: 'Inter', sans-serif;
+    line-height: 1;
+}
+.rmp-date-chip.active .rdc-day {
+    color: var(--accent-color);
+}
+
+/* ====== SCHEDULE PANEL: TIME SLOTS ====== */
+.rmp-time-slot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    padding: 14px 16px;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.rmp-time-slot:hover {
+    background: rgba(255,255,255,0.08);
+    border-color: rgba(255,255,255,0.16);
+}
+.rmp-time-slot.selected {
+    background: rgba(212,175,55,0.1);
+    border-color: var(--accent-color);
+    box-shadow: 0 4px 16px rgba(212,175,55,0.15);
+}
+.rst-time {
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 3px;
+}
+.rmp-time-slot.selected .rst-time {
+    color: var(--accent-color);
+}
+.rst-label {
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+.rst-price {
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+    font-family: 'Inter', sans-serif;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.rmp-time-slot.selected .rst-price {
+    color: var(--accent-color);
+}
+
+/* ====== SCHEDULE PANEL: PLAN SUMMARY ====== */
+#rmp-plan-summary {
+    border-top: 1px solid rgba(255,255,255,0.07);
+    padding-top: 18px;
+    margin-top: 4px;
+    animation: fadeInStep 0.3s ease forwards;
+}
+#rmp-plan-summary .dpp-section-title {
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    font-weight: 700;
+    margin: 0 0 12px 0;
+}
