@@ -9,6 +9,9 @@
 <!-- Ionicons -->
 <script src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js" type="module"></script>
 <script nomodule="" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+<!-- Mapbox GL JS -->
+<script src="https://api.mapbox.com/mapbox-gl-js/v3.9.0/mapbox-gl.js"></script>
+<link href="https://api.mapbox.com/mapbox-gl-js/v3.9.0/mapbox-gl.css" rel="stylesheet"/>
 </head>
 <body>
 <!-- ====== DRIVER APP - iPhone Mockup ====== -->
@@ -18,10 +21,12 @@
 
 <!-- ====== SCREEN 1: DASHBOARD (Home) ====== -->
 <section class="screen active" id="dashboard-screen">
+    <div id="driver-map" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; display: none;"></div>
+    <div id="dashboard-content" style="position: relative; z-index: 1; width: 100%; height: 100%; display: flex; flex-direction: column; overflow: hidden; transition: opacity 0.3s ease;">
     <header class="app-header">
-        <div class="header-left">
-            <h2>JetSlice</h2>
-            <span class="driver-badge">COURIER</span>
+        <div class="header-left" style="display: flex; flex-direction: column; gap: 0;">
+            <h2 style="margin: 0; line-height: 1;">JetSlice</h2>
+            <img alt="" src="../jetslice_wing_only.png" style="width: 60px; height: auto; margin-top: 2px; display: block; filter: brightness(0) invert(1);"/>
         </div>
         <div class="header-right">
             <div class="online-toggle" id="onlineToggle" onclick="driver.toggleOnline()">
@@ -33,12 +38,6 @@
         </div>
     </header>
 
-    <!-- Status Bar -->
-    <div class="driver-status-bar" id="statusBar">
-        <div class="status-pulse"></div>
-        <span>You're offline</span>
-    </div>
-
     <!-- Stats Overview -->
     <div class="driver-stats">
         <div class="stat-card highlight">
@@ -47,7 +46,11 @@
             <span class="stat-label">Today</span>
         </div>
         <div class="stat-card">
-            <ion-icon name="airplane-outline"></ion-icon>
+            <div style="position: relative; display: flex; flex-direction: column; align-items: center; width: 24px; height: 24px; justify-content: flex-end; margin-bottom: 4px;">
+                <div style="position: absolute; top: -10px; font-size: 12px; animation: steamRise 2s infinite ease-out; color: var(--text-secondary);">♨️</div>
+                <ion-icon name="cube" style="font-size: 14px; z-index: 2; margin-bottom: -2px;"></ion-icon>
+                <img src="../jetslice_wing_only.png" style="width: 20px; filter: invert(1); opacity: 0.8;" />
+            </div>
             <span class="stat-value" id="deliveryCount">0</span>
             <span class="stat-label">Deliveries</span>
         </div>
@@ -94,16 +97,37 @@
         <h3>Incoming Requests</h3>
         <span class="badge-count" id="requestCount">0</span>
     </div>
-    <div class="order-feed" id="orderFeed">
-        <div class="empty-feed" id="emptyFeed">
-            <ion-icon name="notifications-off-outline"></ion-icon>
-            <p>No requests yet</p>
-            <span>Go online to receive delivery requests</span>
+    <div class="order-feed" id="orderFeed" style="display: flex; flex-direction: column; flex: 1;">
+        <div class="empty-feed" id="emptyFeed" style="flex: 1; display: flex; flex-direction: column;">
+            <div style="margin-bottom: 20px; text-align: center;">
+                <ion-icon name="trending-up-outline" style="font-size: 48px; color: var(--accent-color); margin-bottom: 12px;"></ion-icon>
+                <p style="font-size: 18px; font-weight: 700; color: white; margin: 0 0 8px;">High Demand Area</p>
+                <span style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; display: block; padding: 0 10px;">
+                    Local couriers are averaging <strong>$450/day</strong> right now.<br>Stay online to catch the next premium order.
+                </span>
+            </div>
+
+            <div onclick="const t = this.querySelector('.call-toggle'); if(t.style.background === 'var(--green)') { t.style.background = 'var(--surface-light)'; t.children[0].style.transform = 'translateX(0)'; } else { t.style.background = 'var(--green)'; t.children[0].style.transform = 'translateX(18px)'; }" style="background: linear-gradient(145deg, rgba(212,175,55,0.15), rgba(212,175,55,0.05)); border: 1px solid rgba(212,175,55,0.3); border-radius: 12px; padding: 12px; width: 100%; text-align: left; cursor: pointer; margin-top: auto;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 28px; height: 28px; border-radius: 50%; background: rgba(212,175,55,0.2); display: flex; align-items: center; justify-content: center;">
+                        <ion-icon name="call" style="font-size: 14px; color: var(--accent-color);"></ion-icon>
+                    </div>
+                    <div style="flex: 1;">
+                        <span style="font-size: 14px; font-weight: 600; color: white; display: block;">Phone Call Alerts</span>
+                        <span style="font-size: 11px; color: rgba(255,255,255,0.7); display: block; line-height: 1.2; margin-top: 2px;">
+                            Receive a call when premium orders arrive.
+                        </span>
+                    </div>
+                    <div class="call-toggle" style="background: var(--surface-light); width: 40px; height: 22px; border-radius: 11px; position: relative; transition: background 0.3s; flex-shrink: 0;">
+                        <div class="thumb" style="background:#fff;width:18px;height:18px;border-radius:50%;position:absolute;left:2px;top:2px;box-shadow: 0 1px 3px rgba(0,0,0,0.3); transition: transform 0.3s;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
         </div>
     </div>
-
+    </div>
 </section>
-
 <!-- ====== SCREEN 2: MY DELIVERIES ====== -->
 <section class="screen" id="deliveries-screen">
     <header class="screen-header">
@@ -281,34 +305,34 @@
 
         <!-- Settings -->
         <div class="settings-group">
-            <div class="settings-item" onclick="driver.showVehicleInfo()">
-                <ion-icon name="car-sport-outline"></ion-icon>
-                <span>Vehicle Information</span>
-                <ion-icon name="chevron-forward-outline" class="chevron"></ion-icon>
-            </div>
-            <div class="settings-item" onclick="driver.showDocuments()">
+            <div class="settings-item" onclick="driver.showSubScreen('docs-screen')">
                 <ion-icon name="document-text-outline"></ion-icon>
-                <span>Documents</span>
+                <span class="item-label">Documents</span>
+                <span class="settings-value" style="color: var(--green);">Up to date</span>
                 <ion-icon name="chevron-forward-outline" class="chevron"></ion-icon>
             </div>
-            <div class="settings-item">
+            <div class="settings-item" onclick="driver.showSubScreen('notif-screen')">
                 <ion-icon name="notifications-outline"></ion-icon>
-                <span>Notification Preferences</span>
+                <span class="item-label">Notification Preferences</span>
+                <span class="settings-value">Push, SMS</span>
                 <ion-icon name="chevron-forward-outline" class="chevron"></ion-icon>
             </div>
-            <div class="settings-item">
+            <div class="settings-item" onclick="driver.showSubScreen('payment-screen')">
                 <ion-icon name="card-outline"></ion-icon>
-                <span>Payment Methods</span>
+                <span class="item-label">Payment Methods</span>
+                <span class="settings-value">Chase •••• 4321</span>
                 <ion-icon name="chevron-forward-outline" class="chevron"></ion-icon>
             </div>
-            <div class="settings-item">
+            <div class="settings-item" onclick="driver.showSubScreen('insurance-screen')">
                 <ion-icon name="shield-checkmark-outline"></ion-icon>
-                <span>Insurance & Safety</span>
+                <span class="item-label">Insurance & Safety</span>
+                <span class="settings-value" style="color: var(--green);">Active</span>
                 <ion-icon name="chevron-forward-outline" class="chevron"></ion-icon>
             </div>
-            <div class="settings-item">
+            <div class="settings-item" onclick="driver.showSubScreen('help-screen')">
                 <ion-icon name="help-circle-outline"></ion-icon>
-                <span>Help & Support</span>
+                <span class="item-label">Help & Support</span>
+                <span class="settings-value">24/7 Agent</span>
                 <ion-icon name="chevron-forward-outline" class="chevron"></ion-icon>
             </div>
         </div>
@@ -323,7 +347,11 @@
         <span>Home</span>
     </a>
     <a class="nav-item" href="#" onclick="driver.navigateTab(event, 'deliveries-screen')">
-        <ion-icon name="cube"></ion-icon>
+        <div style="position: relative; display: flex; flex-direction: column; align-items: center; width: 24px; height: 24px; justify-content: flex-end; margin-bottom: 2px;">
+            <div style="position: absolute; top: -10px; font-size: 12px; animation: steamRise 2s infinite ease-out; color: inherit;">♨️</div>
+            <ion-icon name="cube" style="font-size: 14px; z-index: 2; margin-bottom: -2px;"></ion-icon>
+            <img src="../jetslice_wing_only.png" style="width: 20px; filter: invert(1); opacity: 0.8;" />
+        </div>
         <span>Deliveries</span>
     </a>
     <a class="nav-item" href="#" onclick="driver.navigateTab(event, 'earnings-screen')">
@@ -348,6 +376,22 @@
         <div class="om-payout">
             <span class="om-payout-amount" id="modalPay">$85</span>
             <span class="om-payout-label">Estimated Payout</span>
+        </div>
+        <div class="om-earnings-row">
+            <div class="om-earnings-chip">
+                <ion-icon name="swap-horizontal-outline"></ion-icon>
+                <div>
+                    <span class="om-earn-label">Est. Round Trip</span>
+                    <span class="om-earn-value" id="modalRoundTrip">~1h 56m</span>
+                </div>
+            </div>
+            <div class="om-earnings-chip highlight">
+                <ion-icon name="trending-up-outline"></ion-icon>
+                <div>
+                    <span class="om-earn-label">Earning Rate</span>
+                    <span class="om-earn-value" id="modalPerHour">$44/hr</span>
+                </div>
+            </div>
         </div>
         <div class="om-route-card">
             <div class="om-stop">
@@ -374,8 +418,12 @@
                 <span id="modalCargo">Heated Case</span>
             </div>
             <div class="om-detail-chip">
-                <ion-icon name="time-outline"></ion-icon>
-                <span id="modalETA">~58 min</span>
+                <ion-icon name="airplane-outline"></ion-icon>
+                <span id="modalFlyout">~58 min</span>
+            </div>
+            <div class="om-detail-chip">
+                <ion-icon name="return-down-back-outline"></ion-icon>
+                <span id="modalReturn">~45 min</span>
             </div>
             <div class="om-detail-chip">
                 <ion-icon name="resize-outline"></ion-icon>
@@ -391,8 +439,177 @@
     </div>
 </div>
 
+<!-- ====== SUB SCREENS ====== -->
+<section class="screen sub-screen" id="docs-screen">
+    <header class="sub-screen-header">
+        <div class="sub-screen-back" onclick="driver.hideSubScreen('docs-screen')">
+            <ion-icon name="chevron-back-outline"></ion-icon> Back
+        </div>
+        <h2>Documents</h2>
+    </header>
+    <div class="screen-scroll sub-content-padding">
+        <div class="mock-doc-card">
+            <ion-icon name="checkmark-circle"></ion-icon>
+            <div class="mock-doc-info">
+                <span class="mock-doc-title">Driver's License</span>
+                <span class="mock-doc-status">Expires: 12/2027</span>
+            </div>
+        </div>
+        <div class="mock-doc-card">
+            <ion-icon name="checkmark-circle"></ion-icon>
+            <div class="mock-doc-info">
+                <span class="mock-doc-title">Background Check</span>
+                <span class="mock-doc-status">Completed: 01/2026</span>
+            </div>
+        </div>
+        <div class="mock-doc-card">
+            <ion-icon name="checkmark-circle"></ion-icon>
+            <div class="mock-doc-info">
+                <span class="mock-doc-title">Vehicle Registration</span>
+                <span class="mock-doc-status">Expires: 08/2026</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="screen sub-screen" id="notif-screen">
+    <header class="sub-screen-header">
+        <div class="sub-screen-back" onclick="driver.hideSubScreen('notif-screen')">
+            <ion-icon name="chevron-back-outline"></ion-icon> Back
+        </div>
+        <h2>Notifications</h2>
+    </header>
+    <div class="screen-scroll sub-content-padding">
+        <div class="mock-toggle-row">
+            <span class="mock-toggle-label">Push Notifications</span>
+            <div class="mock-toggle"></div>
+        </div>
+        <div class="mock-toggle-row">
+            <span class="mock-toggle-label">SMS Alerts</span>
+            <div class="mock-toggle"></div>
+        </div>
+        <div class="mock-toggle-row">
+            <span class="mock-toggle-label">Email Summaries</span>
+            <div class="mock-toggle" style="background: var(--surface-light);"><div style="background:#fff;width:20px;height:20px;border-radius:50%;position:absolute;left:2px;top:2px;"></div></div>
+        </div>
+        <div class="mock-toggle-row">
+            <span class="mock-toggle-label">Surge Pricing Alerts</span>
+            <div class="mock-toggle"></div>
+        </div>
+    </div>
+</section>
+
+<section class="screen sub-screen" id="payment-screen">
+    <header class="sub-screen-header">
+        <div class="sub-screen-back" onclick="driver.hideSubScreen('payment-screen')">
+            <ion-icon name="chevron-back-outline"></ion-icon> Back
+        </div>
+        <h2>Payment Methods</h2>
+    </header>
+    <div class="screen-scroll sub-content-padding">
+        <div class="mock-method-card" style="border-color: var(--accent-color);">
+            <ion-icon name="card"></ion-icon>
+            <div class="mock-method-info">
+                <span class="mock-method-title">Chase Bank Checking</span>
+                <span class="mock-method-status" style="color: var(--green);">Default Direct Deposit</span>
+            </div>
+            <span style="font-size: 13px; font-weight: 700;">•••• 4321</span>
+        </div>
+        <button class="payout-btn" style="width: 100%; margin-top: 20px; background: var(--surface-light); color: #fff;">
+            + Add Payment Method
+        </button>
+    </div>
+</section>
+
+<section class="screen sub-screen" id="insurance-screen">
+    <header class="sub-screen-header">
+        <div class="sub-screen-back" onclick="driver.hideSubScreen('insurance-screen')">
+            <ion-icon name="chevron-back-outline"></ion-icon> Back
+        </div>
+        <h2>Insurance & Safety</h2>
+    </header>
+    <div class="screen-scroll sub-content-padding">
+        <div class="mock-doc-card">
+            <ion-icon name="shield-checkmark"></ion-icon>
+            <div class="mock-doc-info">
+                <span class="mock-doc-title">Commercial Liability</span>
+                <span class="mock-doc-status">Active - JetSlice Provided</span>
+            </div>
+        </div>
+        <div class="mock-doc-card">
+            <ion-icon name="shield-checkmark"></ion-icon>
+            <div class="mock-doc-info">
+                <span class="mock-doc-title">Personal Auto Policy</span>
+                <span class="mock-doc-status">Verified - State Farm</span>
+            </div>
+        </div>
+        <button class="payout-btn" style="width: 100%; margin-top: 20px; background: rgba(255,69,58,0.1); color: var(--red);">
+            Report an Accident
+        </button>
+    </div>
+</section>
+
+<section class="screen sub-screen" id="help-screen">
+    <header class="sub-screen-header">
+        <div class="sub-screen-back" onclick="driver.hideSubScreen('help-screen')">
+            <ion-icon name="chevron-back-outline"></ion-icon> Back
+        </div>
+        <h2>Help & Support</h2>
+    </header>
+    <div class="screen-scroll sub-content-padding">
+        <div class="mock-toggle-row" style="cursor: pointer;">
+            <span class="mock-toggle-label">Contact Dispatch</span>
+            <ion-icon name="chevron-forward-outline" style="color: var(--text-secondary);"></ion-icon>
+        </div>
+        <div class="mock-toggle-row" style="cursor: pointer;">
+            <span class="mock-toggle-label">Courier Guidebook</span>
+            <ion-icon name="chevron-forward-outline" style="color: var(--text-secondary);"></ion-icon>
+        </div>
+        <div class="mock-toggle-row" style="cursor: pointer;">
+            <span class="mock-toggle-label">App Diagnostics</span>
+            <ion-icon name="chevron-forward-outline" style="color: var(--text-secondary);"></ion-icon>
+        </div>
+    </div>
+</section>
+
 </div><!-- /app-container -->
 </div><!-- /iphone-mockup -->
+
+<template id="incoming-order-template">
+    <div class="incoming-card" style="background: linear-gradient(180deg, rgba(20,20,20,1) 0%, rgba(10,10,10,1) 100%); border: 1px solid var(--accent-glow); border-radius: 20px; padding: 20px; margin-bottom: 16px; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <span style="background: rgba(212,175,55,0.2); color: var(--accent-color); padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 800; letter-spacing: 1px;">PREMIUM DELIVERY</span>
+            <span class="countdown-timer" style="color: #ff453a; font-family: monospace; font-size: 16px; font-weight: bold; background: rgba(255,69,58,0.1); padding: 4px 8px; border-radius: 6px;">02:00</span>
+        </div>
+        
+        <div style="text-align: center; margin-bottom: 20px;">
+            <div style="font-size: 13px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Estimated Payout</div>
+            <div class="payout-amount" style="font-size: 42px; font-weight: 200; color: white; line-height: 1;">$450</div>
+        </div>
+
+        <div style="background: rgba(255,255,255,0.03); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+            <div style="display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px;">
+                <ion-icon name="restaurant-outline" style="color: var(--text-secondary); font-size: 18px; margin-top: 2px;"></ion-icon>
+                <div>
+                    <div class="pickup-loc" style="font-size: 14px; font-weight: 600; color: white;">Pickup Location</div>
+                </div>
+            </div>
+            <div style="display: flex; align-items: flex-start; gap: 12px;">
+                <ion-icon name="location-outline" style="color: var(--accent-color); font-size: 18px; margin-top: 2px;"></ion-icon>
+                <div>
+                    <div class="dropoff-loc" style="font-size: 14px; font-weight: 600; color: white;">Dropoff Location</div>
+                </div>
+            </div>
+        </div>
+
+        <div style="position: relative;">
+            <button class="accept-btn" style="width: 100%; background: var(--accent-color); color: black; border: none; padding: 16px; border-radius: 14px; font-size: 16px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; position: relative; z-index: 10; box-shadow: 0 4px 15px rgba(212,175,55,0.4); transition: transform 0.2s;">
+                Accept Order
+            </button>
+            <div class="money-fall-container" style="position: absolute; bottom: 0; left: 0; width: 100%; height: 0; pointer-events: none; overflow: visible; z-index: 1;"></div>
+        </div>
+    </div>
+</template>
 
 <script src="driver-app.js"></script>
 </body>

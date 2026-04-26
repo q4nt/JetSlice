@@ -2639,6 +2639,27 @@ const app = {
         this.fireGoldConfetti();
         this._startMissionTimeline();
         
+        const driverFrame = document.getElementById('driver-iframe');
+        if (driverFrame && driverFrame.contentWindow) {
+            const destLabel = document.getElementById('destination') ? document.getElementById('destination').value : 'Destination';
+            const originLabel = document.getElementById('origin') ? document.getElementById('origin').value : 'Origin';
+            const costEl = document.getElementById('dpp-total-cost');
+            const totalCostText = costEl ? costEl.textContent : '$450';
+            
+            driverFrame.contentWindow.postMessage({
+                type: 'NEW_ORDER',
+                order: {
+                    pickup: originLabel || 'Restaurant',
+                    dropoff: destLabel || 'Customer Location',
+                    payout: totalCostText,
+                    oCoords: this._activeOriginCoords || [-74.006, 40.7128],
+                    dCoords: this._activeDestCoords || [-118.2437, 34.0522],
+                    emoji: this._activeEmoji || '📦',
+                    mapboxToken: mapboxgl.accessToken
+                }
+            }, '*');
+        }
+
         if (!this.map) {
             // Fallback if no map - just navigate directly
             this.navigateTo('tracking-screen');
@@ -2721,6 +2742,7 @@ const app = {
             zoom: 3.2,
             pitch: 25,
             bearing: 0,
+            padding: { top: 0, bottom: 420, left: 0, right: 0 },
             duration: 2000,
             essential: true
         });
