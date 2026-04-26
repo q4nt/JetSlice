@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 
 <html lang="en">
 <head>
@@ -231,9 +231,9 @@ AI Powered
 <!-- ====== SCREEN 3: ACTIVE MISSION ====== -->
 <section class="screen" id="tracking-screen">
 <style>.tracking-bottom-sheet::-webkit-scrollbar { display: none; }</style>
-<div class="tracking-bottom-sheet" style="height: 50%; max-height: 50%; overflow-y: auto; padding-bottom: 40px; scrollbar-width: none; -ms-overflow-style: none;">
+<div class="tracking-bottom-sheet" id="tracking-sheet" style="height: 70%; max-height: 90%; overflow-y: auto; padding-bottom: 120px; scrollbar-width: none; -ms-overflow-style: none;">
 <div class="drag-handle"></div>
-<h3>Mission Status</h3>
+<h3>Order Status</h3>
 
 <!-- 1. TIMELINE / PROGRESS BAR — top -->
 <div style="margin-bottom: 24px;" id="mission-timeline-wrap">
@@ -371,7 +371,12 @@ AI Powered
         <label class="toggle-switch"><input checked="" type="checkbox"/><span class="slider"></span></label>
     </div>
 </div>
-<button class="secondary-btn" onclick="app.goBack('home-screen')" style="width: 100%; border-radius: 20px; font-weight: bold; background: rgba(255,255,255,0.05); color: white; padding: 14px; border: 1px solid rgba(255,255,255,0.1);">Collapse View</button>
+<div style="display: flex; gap: 12px; margin-top: 4px;">
+    <button class="secondary-btn" onclick="app.goBack('home-screen')" style="flex: 1; border-radius: 20px; font-weight: bold; background: rgba(255,255,255,0.05); color: white; padding: 14px; border: 1px solid rgba(255,255,255,0.1); cursor: pointer;">Collapse View</button>
+    <button class="secondary-btn" style="flex: 1; border-radius: 20px; font-weight: bold; background: rgba(212,175,55,0.1); color: var(--accent-color); padding: 14px; border: 1px solid rgba(212,175,55,0.3); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s;">
+        <ion-icon name="help-circle-outline" style="font-size: 18px;"></ion-icon> Help
+    </button>
+</div>
 </div>
 </section>
 <!-- ====== SCREEN: SEARCH ====== -->
@@ -1035,6 +1040,15 @@ AI Powered
 </button>
 </div>
 </div></div></div>
-</div></div><script src="app.js?v=6"></script>
+</div></div>
+
+<!-- ====== DRIVER ROW ====== -->
+<div class="driver-row" style="display: flex; flex-direction: column; align-items: center; gap: 20px; margin-top: 80px; margin-bottom: 80px;">
+    <h2 style="color: white; font-family: Inter; margin-bottom: 20px;">As Courier (Driver View)</h2>
+    <!-- Iframe to the driver side app -->
+    <iframe src="driver/index.html" style="width: 100vw; height: 1000px; border: none; overflow: hidden;" title="Driver Interface"></iframe>
+</div>
+
+<script src="app.js?v=6"></script>
 </body>
 </html>

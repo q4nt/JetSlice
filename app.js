@@ -4167,6 +4167,81 @@ function bootJetSlice() {
             }
         }
     });
+
+    // ===== TRACKING SHEET DRAG-TO-RESIZE =====
+    (function initTrackingSheetDrag() {
+        const sheet = document.getElementById('tracking-sheet');
+        if (!sheet) return;
+        const handle = sheet.querySelector('.drag-handle');
+        if (!handle) return;
+
+        const MIN_PCT = 25;   // collapsed
+        const MAX_PCT = 90;   // fully expanded
+        let isDragging = false;
+        let startY = 0;
+        let startHeight = 0;
+
+        function getParentHeight() {
+            // The parent is the tracking-screen section which fills the iphone viewport
+            const parent = sheet.closest('.screen') || sheet.parentElement;
+            return parent ? parent.offsetHeight : 844;
+        }
+
+        function onStart(e) {
+            isDragging = true;
+            startY = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
+            startHeight = sheet.offsetHeight;
+            sheet.classList.add('dragging');
+            sheet.style.overflowY = 'hidden'; // prevent scroll while dragging
+            e.preventDefault();
+        }
+
+        function onMove(e) {
+            if (!isDragging) return;
+            const clientY = e.type.startsWith('touch') ? e.touches[0].clientY : e.clientY;
+            const delta = startY - clientY; // positive = dragging up = taller
+            const parentH = getParentHeight();
+            let newH = startHeight + delta;
+            // Clamp
+            const minH = parentH * (MIN_PCT / 100);
+            const maxH = parentH * (MAX_PCT / 100);
+            newH = Math.max(minH, Math.min(maxH, newH));
+            sheet.style.height = newH + 'px';
+            e.preventDefault();
+        }
+
+        function onEnd() {
+            if (!isDragging) return;
+            isDragging = false;
+            sheet.classList.remove('dragging');
+            sheet.style.overflowY = 'auto'; // restore scrolling
+
+            // Snap to nearest detent: 30%, 70%, 90%
+            const parentH = getParentHeight();
+            const currentPct = (sheet.offsetHeight / parentH) * 100;
+            const detents = [30, 70, 90];
+            let closest = detents[0];
+            let closestDist = Math.abs(currentPct - detents[0]);
+            for (let i = 1; i < detents.length; i++) {
+                const dist = Math.abs(currentPct - detents[i]);
+                if (dist < closestDist) {
+                    closest = detents[i];
+                    closestDist = dist;
+                }
+            }
+            sheet.style.height = closest + '%';
+        }
+
+        // Mouse events
+        handle.addEventListener('mousedown', onStart);
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onEnd);
+
+        // Touch events
+        handle.addEventListener('touchstart', onStart, { passive: false });
+        document.addEventListener('touchmove', onMove, { passive: false });
+        document.addEventListener('touchend', onEnd);
+    })();
 }
 
 // Initialize listeners when DOM is ready, but defer Mapbox until API token loads
