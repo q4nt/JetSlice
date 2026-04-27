@@ -25,22 +25,44 @@
     </script>
 </head>
 <body class="no-active-mission">
-<div class="production-row" style="display: flex; flex-direction: column; align-items: center; gap: 20px;"><h2 style="color: white; font-family: Inter; margin-bottom: 20px;">As Production</h2><div class="iphone-mockup" id="active-iphone-simulator">
+<div id="ws-canvas">
+<div class="production-row" style="position: absolute; left: 3800px; top: 4400px; display: flex; flex-direction: column; align-items: center; gap: 20px; z-index: 2;"><h2 style="color: white; font-family: Inter; margin-bottom: 20px;">Client iPhone</h2><div class="iphone-mockup" id="active-iphone-simulator">
 <div class="dynamic-island"></div>
 <div class="app-container">
 <!-- Mapbox Globe Background -->
 <div id="map"></div>
+<!-- ====== SCREEN 0: AUTHENTICATION ====== -->
+<section class="screen" id="auth-screen" style="background: #000; z-index: 100; height: 100%;">
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 24px;">
+        <h1 style="color: white; font-size: 36px; margin-bottom: 0; line-height: 1; font-weight: 800; letter-spacing: 1px;">JetSlice</h1>
+        <img alt="" src="assets/img/jetslice_wing_only.png" style="width: 120px; height: auto; margin-top: -4px; margin-bottom: 24px; animation: pulseOrb 3s infinite ease-in-out; filter: drop-shadow(0 0 20px rgba(212,175,55,0.4));"/>
+        <p style="color: var(--text-secondary); font-size: 14px; text-align: center; margin-bottom: 64px;">Premium logistics, delivered directly to you.</p>
+        
+        <button onclick="app.signInWithApple()" style="background: white; color: black; border: none; padding: 16px 24px; border-radius: 12px; font-weight: 600; font-size: 16px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; margin-bottom: 16px; box-shadow: 0 4px 15px rgba(255,255,255,0.2);">
+            <ion-icon name="logo-apple" style="font-size: 22px;"></ion-icon>
+            Sign in with Apple
+        </button>
+        
+        <button onclick="app.goBack('home-screen')" style="background: transparent; color: #888; border: 1px solid rgba(255,255,255,0.1); padding: 14px 24px; border-radius: 12px; font-weight: 500; font-size: 14px; width: 100%; cursor: pointer; margin-bottom: 16px;">
+            Continue as Guest
+        </button>
+        
+        <p style="font-size: 11px; color: #666; text-align: center; max-width: 80%; line-height: 1.4;">By signing in, you agree to our <span style="text-decoration: underline;">Terms of Service</span> and <span style="text-decoration: underline;">Privacy Policy</span>.</p>
+    </div>
+</section>
+
 <!-- ====== SCREEN 1: HOME ====== -->
 <section class="screen active" id="home-screen">
+<!-- Sign-in Banner removed as per request -->
 <header class="app-header">
 <div style="display: flex; flex-direction: column; gap: 0;">
 <h2 style="margin: 0; line-height: 1;">JetSlice</h2>
-<img alt="" id="jetslice-wing" src="jetslice_wing_only.png" style="width: 78px; height: auto; margin-top: -2px; display: block; transition: opacity 0.4s ease, transform 0.4s ease;"/>
+<img alt="" id="jetslice-wing" src="assets/img/jetslice_wing_only.png" style="width: 78px; height: auto; margin-top: -2px; display: block; transition: opacity 0.4s ease, transform 0.4s ease;"/>
 </div>
 <div style="display:flex; align-items:center;">
-<button onclick="app.navigateTab(event, 'orders-screen')" style="background: rgba(212, 175, 55, 0.15); color: var(--accent-color); border: 1px solid rgba(212, 175, 55, 0.4); padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s ease;">
-<ion-icon name="receipt-outline" style="font-size: 14px;"></ion-icon>
-Orders
+<button id="header-action-btn" onclick="app.handleHeaderAction(event)" style="background: rgba(212, 175, 55, 0.15); color: var(--accent-color); border: 1px solid rgba(212, 175, 55, 0.4); padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s ease;">
+<ion-icon id="header-action-icon" name="person-circle-outline" style="font-size: 14px;"></ion-icon>
+<span id="header-action-text">Sign in</span>
 </button>
 </div>
 </header>
@@ -52,8 +74,8 @@ Orders
 <!-- Collapsed Summary Bar -->
 <div class="booking-summary" onclick="app.toggleBookingForm()">
 <div class="summary-text">
-<span class="summary-route" id="summary-route-text">New York, NY → Beverly Hills, CA</span>
-<span class="summary-cargo" id="summary-cargo-text">• Artisan Pizza (Heated)</span>
+<span class="summary-route" id="summary-route-text">New York, NY -> Beverly Hills, CA</span>
+<span class="summary-cargo" id="summary-cargo-text"> Artisan Pizza (Heated)</span>
 </div>
 <ion-icon class="summary-chevron" name="chevron-down-outline"></ion-icon>
 </div>
@@ -94,38 +116,39 @@ Orders
 </button>
 </div>
 </div>
-<div class="ai-command-wrapper" style="margin: auto 24px 0 24px; position: relative;">
+<div class="ai-command-wrapper" style="margin: auto 24px 0 24px; position: relative; transform: translateY(8px);">
 <div class="autocomplete-popup-container hidden" style="position: absolute; bottom: 100%; left: 0; width: 100%; margin-bottom: 8px; background: var(--panel-glass); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid var(--panel-border); border-radius: 16px; overflow: hidden; box-shadow: 0 -10px 40px rgba(0,0,0,0.5); display: flex; flex-direction: column; z-index: 100; max-height: 300px; overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none;"></div>
 <div class="ai-command-panel" id="ai-command-panel" style="background-color: #000; backdrop-filter: blur(16px); padding: 12px 16px; border-radius: 12px; border: 1px solid var(--panel-border); display: flex; align-items: center; justify-content: space-between; flex-wrap: nowrap; box-sizing: border-box; box-shadow: 0 8px 32px rgba(0,0,0,0.6); width: 100%;">
 <ion-icon name="mic-outline" onclick="app.triggerVoiceConcierge()" style="color: var(--accent-color); font-size: 20px; margin-right: 12px; flex-shrink: 0; cursor: pointer;"></ion-icon>
 <input autocomplete="off" id="cmdField" oninput="app.handleCommandInput(event)" onkeydown="app.handleSearch(event)" placeholder="Search luxury dining, or send a package..." style="background: transparent; border: none; color: var(--text-primary); font-size: 14px; flex: 1 1 auto; min-width: 0; outline: none; caret-color: var(--accent-color); width: 100%;" type="text"/>
 <ion-icon class="cmd-submit-btn" name="arrow-forward-outline" onclick="app.handleSearch({key: 'Enter'})" style="color: var(--accent-color); font-size: 20px; cursor: pointer; margin-left:12px; display: none;"></ion-icon>
 </div>
-<div onwheel="event.preventDefault(); this.scrollLeft += event.deltaY;" style="display: flex; gap: 8px; overflow-x: auto; margin-top: 14px; padding-bottom: 8px; scrollbar-width: none; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain;">
-<div onclick="app.navigateTab(event, 'search-screen')" style="border: 1px solid var(--accent-color); color: var(--accent-color); background: #000; padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+<div onwheel="event.preventDefault(); this.scrollLeft += event.deltaY;" style="display: flex; gap: 8px; overflow-x: auto; margin-top: 14px; padding-bottom: 8px; scrollbar-width: none; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; margin-left: -24px; margin-right: -24px; padding-left: 24px;">
+<div onclick="app.navigateTab(event, 'search-screen')" style="border: 1px solid var(--accent-color); color: var(--accent-color); background: #000; padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; white-space: nowrap; flex-shrink: 0; cursor: pointer; display: flex; align-items: center; gap: 5px;">
 <ion-icon name="star" style="font-size: 13px;"></ion-icon> Top Rated
                             </div>
-<div onclick="app.navigateTab(event, 'search-screen')" style="border: 1px solid var(--accent-color); color: var(--accent-color); background: #000; padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 5px;">
-<ion-icon name="ribbon" style="font-size: 13px;"></ion-icon> Michelin Star
+<div onclick="app.navigateTab(event, 'search-screen')" style="border: 1px solid var(--accent-color); color: var(--accent-color); background: #000; padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; white-space: nowrap; flex-shrink: 0; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+<ion-icon name="ribbon" style="font-size: 13px;"></ion-icon> Michelin
                             </div>
-<div onclick="app.toggleBookingForm()" style="border: 1px solid var(--accent-color); color: var(--accent-color); background: #000; padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+<div onclick="app.toggleBookingForm()" style="border: 1px solid var(--accent-color); color: var(--accent-color); background: #000; padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; white-space: nowrap; flex-shrink: 0; cursor: pointer; display: flex; align-items: center; gap: 5px;">
 <ion-icon name="cube-outline" style="font-size: 13px;"></ion-icon> Send Package
                             </div>
-<div onclick="app.activateBossMode()" style="border: none; color: white; background: linear-gradient(135deg, #FF4B2B, #FF416C); padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 5px; box-shadow: 0 4px 10px rgba(255, 65, 108, 0.4);" title="Boss Mode - Deliver All">
+<div onclick="app.activateBossMode()" style="border: none; color: white; background: linear-gradient(135deg, #FF4B2B, #FF416C); padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; white-space: nowrap; flex-shrink: 0; cursor: pointer; display: flex; align-items: center; gap: 5px; box-shadow: 0 4px 10px rgba(255, 65, 108, 0.4);" title="Boss Mode - Deliver All">
 <ion-icon name="planet" style="font-size: 13px; color: white;"></ion-icon> Boss Mode
                             </div>
-<div onclick="app.navigateTab(event, 'search-screen')" style="border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); background: var(--surface-light); padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: 500; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+<div onclick="app.navigateTab(event, 'search-screen')" style="border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); background: var(--surface-light); padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: 500; white-space: nowrap; flex-shrink: 0; cursor: pointer; display: flex; align-items: center; gap: 5px;">
 <ion-icon name="location" style="font-size: 13px; color: var(--text-secondary);"></ion-icon> Near Me
                             </div>
-<div onclick="app.navigateTab(event, 'search-screen')" style="border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); background: var(--surface-light); padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: 500; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+<div onclick="app.navigateTab(event, 'search-screen')" style="border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); background: var(--surface-light); padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: 500; white-space: nowrap; flex-shrink: 0; cursor: pointer; display: flex; align-items: center; gap: 5px;">
 <ion-icon name="trending-up" style="font-size: 13px; color: var(--text-secondary);"></ion-icon> Trending
                             </div>
-<div onclick="app.navigateTab(event, 'search-screen')" style="border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); background: var(--surface-light); padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: 500; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+<div onclick="app.navigateTab(event, 'search-screen')" style="border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); background: var(--surface-light); padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: 500; white-space: nowrap; flex-shrink: 0; cursor: pointer; display: flex; align-items: center; gap: 5px;">
 <ion-icon name="moon" style="font-size: 13px; color: var(--text-secondary);"></ion-icon> Late Night
                             </div>
-<div onclick="app.navigateTab(event, 'search-screen')" style="border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); background: var(--surface-light); padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: 500; white-space: nowrap; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+<div onclick="app.navigateTab(event, 'search-screen')" style="border: 1px solid rgba(255,255,255,0.1); color: var(--text-primary); background: var(--surface-light); padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: 500; white-space: nowrap; flex-shrink: 0; cursor: pointer; display: flex; align-items: center; gap: 5px;">
 <ion-icon name="diamond" style="font-size: 13px; color: var(--text-secondary);"></ion-icon> Hidden Gems
                             </div>
+<div style="flex-shrink: 0; width: 16px;"></div>
 </div>
 <div style="display: flex; align-items: center; justify-content: center; gap: 4px; margin-top: 2px; color: #888; font-size: 9px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.8px; opacity: 0.7;">
 <ion-icon name="sparkles" style="font-size: 10px;"></ion-icon>
@@ -148,7 +171,7 @@ AI Powered
 <ion-icon name="cart-outline" style="vertical-align: middle; font-size: 14px; margin-right: 4px;"></ion-icon> <span id="pickup-order-count-text">0 Items</span>
 </div>
 <div style="display: flex; align-items: center; width: 100%;">
-<span id="pickup-sheet-emoji" style="font-size: 30px; flex-shrink: 0;">🍕</span>
+<span id="pickup-sheet-emoji" style="font-size: 30px; flex-shrink: 0;">-</span>
 <div style="flex: 1; min-width: 0; margin-left: 14px;">
 <p id="pickup-restaurant" style="margin: 0; font-size: 15px; font-weight: 600; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">L'Industrie Pizzeria</p>
 <p id="pickup-food-item" style="margin: 3px 0 0; font-size: 12px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Signature Artisan Pizza</p>
@@ -163,71 +186,6 @@ AI Powered
 </button>
 </div>
 </div>
-<!-- ====== SCREEN 2: LOGISTICS & COST ====== -->
-<section class="screen" id="logistics-screen">
-<header class="app-header solid">
-<ion-icon name="chevron-back-outline" onclick="app.goBack('home-screen')"></ion-icon>
-<h2>Logistics</h2>
-<div style="width: 24px;"></div> <!-- Spacer block -->
-</header>
-<div class="content-scroll padded">
-<h3 class="section-title">Route Breakdown</h3>
-<div class="logistics-timeline">
-<!-- Step 1: Uber -->
-<div class="timeline-item" onclick="app.openPartnerApp('uber')" style="cursor: pointer;">
-<div class="timeline-icon uber"><ion-icon name="car-sport"></ion-icon></div>
-<div class="timeline-content">
-<h4>Uber Black SUV <ion-icon name="open-outline" style="font-size: 11px; opacity: 0.5; vertical-align: middle;"></ion-icon></h4>
-<p>Pickup to EWR Airport</p>
-<span class="cost-item">$145.00</span>
-</div>
-</div>
-<!-- Step 2: Flight -->
-<div class="timeline-item flight" onclick="app.openPartnerApp('united')" style="cursor: pointer;">
-<div class="timeline-icon air"><ion-icon name="airplane"></ion-icon></div>
-<div class="timeline-content">
-<h4>United Airlines Flight UA412 <ion-icon name="open-outline" style="font-size: 11px; opacity: 0.5; vertical-align: middle;"></ion-icon></h4>
-<p>EWR (New York) to LAX (Los Angeles)</p>
-<div class="flight-stats">
-<span class="badge">API: United</span>
-<span class="badge alt">Scraped: Southwest ($430)</span>
-</div>
-<span class="cost-item">$520.00 (First Class Cargo)</span>
-</div>
-</div>
-<!-- Step 3: Lyft -->
-<div class="timeline-item" onclick="app.openPartnerApp('lyft')" style="cursor: pointer;">
-<div class="timeline-icon lyft"><ion-icon name="car"></ion-icon></div>
-<div class="timeline-content">
-<h4>Lyft Lux <ion-icon name="open-outline" style="font-size: 11px; opacity: 0.5; vertical-align: middle;"></ion-icon></h4>
-<p>LAX Airport to Beverly Hills</p>
-<span class="cost-item">$85.00</span>
-</div>
-</div>
-<!-- Step 4: Service Fee -->
-<div class="timeline-item">
-<div class="timeline-icon service"><ion-icon name="briefcase"></ion-icon></div>
-<div class="timeline-content">
-<h4>Concierge Handling</h4>
-<p>Temperature-controlled case &amp; agent</p>
-<span class="cost-item">$400.00</span>
-</div>
-</div>
-</div>
-<div class="total-cost-card">
-<div class="total-row">
-<span>Total Upfront Cost</span>
-<div style="display: flex; align-items: center; gap: 12px;">
-<h2 id="total-cost-display-2">$1,150.00</h2>
-<div onclick="app.addTip(1150.00, 'total-cost-display-2')" style="background: rgba(212, 175, 55, 0.15); border: 1px solid var(--accent-color); padding: 6px; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: 0.2s;" title="Add 20% Tip">
-<ion-icon name="add" style="color: var(--accent-color); font-size: 18px;"></ion-icon>
-</div>
-</div>
-</div>
-<button class="primary-btn glow" onclick="app.startMission()">Confirm &amp; Dispatch Agent</button>
-</div>
-</div>
-</section>
 <!-- ====== SCREEN 3: ACTIVE MISSION ====== -->
 <section class="screen" id="tracking-screen">
 <style>.tracking-bottom-sheet::-webkit-scrollbar { display: none; }</style>
@@ -235,7 +193,7 @@ AI Powered
 <div class="drag-handle"></div>
 <h3>Order Status</h3>
 
-<!-- 1. TIMELINE / PROGRESS BAR — top -->
+<!-- 1. TIMELINE / PROGRESS BAR  top -->
 <div style="margin-bottom: 24px;" id="mission-timeline-wrap">
     <!-- Stage labels -->
     <div id="mission-stage-labels" style="display: flex; justify-content: space-between; margin-bottom: 14px;">
@@ -302,7 +260,7 @@ AI Powered
     </div>
 </div>
 
-<!-- 3. LIVE IOT SENSOR DATA — collapsed accordion -->
+<!-- 3. LIVE IOT SENSOR DATA  collapsed accordion -->
 <div style="background: rgba(20,20,20,0.95); border: 1px solid rgba(212,175,55,0.4); border-radius: 16px; margin-bottom: 20px; overflow: hidden; position: relative;">
     <div onclick="this.parentElement.classList.toggle('iot-open')" style="display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; cursor: pointer;">
         <div style="display: flex; align-items: center; gap: 10px;">
@@ -314,7 +272,7 @@ AI Powered
     <div class="iot-body" style="display: none; padding: 0 20px 20px;">
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; position: relative;">
             <div style="position: absolute; top: -80px; right: -30px; width: 100px; height: 100px; background: radial-gradient(circle, rgba(212,175,55,0.2) 0%, transparent 70%); pointer-events:none;"></div>
-            <div><p style="margin: 0 0 4px; font-size: 11px; color: var(--text-secondary);">Internal Temp</p><p id="telemetry-temp" style="margin: 0; font-size: 22px; font-weight: 600; font-family: monospace;">34.2°F</p></div>
+            <div><p style="margin: 0 0 4px; font-size: 11px; color: var(--text-secondary);">Internal Temp</p><p id="telemetry-temp" style="margin: 0; font-size: 22px; font-weight: 600; font-family: monospace;">34.2 deg F</p></div>
             <div><p style="margin: 0 0 4px; font-size: 11px; color: var(--text-secondary);">Pressure</p><p id="telemetry-pressure" style="margin: 0; font-size: 22px; font-weight: 600; font-family: monospace;">1.02 ATM</p></div>
             <div><p style="margin: 0 0 4px; font-size: 11px; color: var(--text-secondary);">Humidity</p><p id="telemetry-humidity" style="margin: 0; font-size: 22px; font-weight: 600; font-family: monospace;">64%</p></div>
             <div><p style="margin: 0 0 4px; font-size: 11px; color: var(--text-secondary);">Status</p><p style="margin: 0; font-size: 14px; font-weight: 600; color: #34c759; margin-top: 4px;">Optimal</p></div>
@@ -333,7 +291,7 @@ AI Powered
         <div>
             <h4 style="margin: 0 0 4px 0; font-size: 16px; color: white;">John Doe</h4>
             <p style="margin: 0; font-size: 12px; color: var(--accent-color);">Lead Logistics Coordinator</p>
-            <p style="margin: 2px 0 0 0; font-size: 11px; color: var(--text-secondary);">4.99 ★ • 1,240 Secure Missions</p>
+            <p style="margin: 2px 0 0 0; font-size: 11px; color: var(--text-secondary);">4.99   1,240 Secure Missions</p>
         </div>
     </div>
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
@@ -395,19 +353,19 @@ AI Powered
                     </h3>
 <div class="curated-list" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 30px;">
 <div class="curated-item" style="display: flex; align-items: center; background: #2a2416; border: 1px solid rgba(212, 175, 55, 0.4); padding: 16px; border-radius: 14px; cursor: pointer; position: relative; overflow: hidden;">
-<span class="emoji-badge" style="font-size: 24px; margin-right: 16px; background: #3a3020; padding: 10px; border-radius: 12px; z-index: 2;">🥩</span>
+<span class="emoji-badge" style="font-size: 24px; margin-right: 16px; background: #3a3020; padding: 10px; border-radius: 12px; z-index: 2;"></span>
 <div class="item-info" style="flex: 1; z-index: 2;">
 <h4 style="margin: 0 0 4px; font-size: 15px; color: white;">A5 Kobe Wagyu (50oz)</h4>
-<p style="margin: 0; font-size: 12px; color: var(--accent-color); font-weight: 600;">Currently over Kansas • Arrives in 40m</p>
+<p style="margin: 0; font-size: 12px; color: var(--accent-color); font-weight: 600;">Currently over Kansas  Arrives in 40m</p>
 </div>
 <button style="background: var(--accent-color); color: black; border: none; padding: 6px 12px; border-radius: 12px; font-weight: bold; font-size: 12px; z-index: 2; cursor: pointer;">Intercept</button>
-<div style="position: absolute; right: -20px; top: -20px; font-size: 100px; opacity: 0.05; z-index: 1;">✈️</div>
+<div style="position: absolute; right: -20px; top: -20px; font-size: 100px; opacity: 0.05; z-index: 1;"></div>
 </div>
 </div>
 <h3 class="section-title">The Michelin Collection</h3>
 <div class="curated-list" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 30px;">
 <div class="curated-item" style="display: flex; align-items: center; background: #252830; padding: 16px; border-radius: 14px; cursor: pointer;">
-<span class="emoji-badge" style="font-size: 24px; margin-right: 16px; background: #1a1c23; padding: 10px; border-radius: 12px;">✨</span>
+<span class="emoji-badge" style="font-size: 24px; margin-right: 16px; background: #1a1c23; padding: 10px; border-radius: 12px;"></span>
 <div class="item-info" style="flex: 1;">
 <h4 style="margin: 0 0 4px; font-size: 15px;">Alinea - Chicago, IL</h4>
 <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">3-Star Degustation Kit (Requires 2-Day Air)</p>
@@ -415,7 +373,7 @@ AI Powered
 <ion-icon name="add-circle-outline" style="font-size: 24px; color: var(--accent-color);"></ion-icon>
 </div>
 <div class="curated-item" style="display: flex; align-items: center; background: #252830; padding: 16px; border-radius: 14px; cursor: pointer;">
-<span class="emoji-badge" style="font-size: 24px; margin-right: 16px; background: #1a1c23; padding: 10px; border-radius: 12px;">🍾</span>
+<span class="emoji-badge" style="font-size: 24px; margin-right: 16px; background: #1a1c23; padding: 10px; border-radius: 12px;"></span>
 <div class="item-info" style="flex: 1;">
 <h4 style="margin: 0 0 4px; font-size: 15px;">The French Laundry - CA</h4>
 <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">Fresh Oysters &amp; Royal Caviar Selection</p>
@@ -426,7 +384,7 @@ AI Powered
 <h3 class="section-title">Top Global Luxuries</h3>
 <div class="curated-list" style="display: flex; flex-direction: column; gap: 12px;">
 <div class="curated-item" style="display: flex; align-items: center; background: #252830; padding: 16px; border-radius: 14px; cursor: pointer;">
-<span class="emoji-badge" style="font-size: 24px; margin-right: 16px; background: #1a1c23; padding: 10px; border-radius: 12px;">🥩</span>
+<span class="emoji-badge" style="font-size: 24px; margin-right: 16px; background: #1a1c23; padding: 10px; border-radius: 12px;"></span>
 <div class="item-info" style="flex: 1;">
 <h4 style="margin: 0 0 4px; font-size: 15px;">A5 Kobe Wagyu Beef</h4>
 <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">Directly imported &amp; cryo-sealed from Japan</p>
@@ -462,7 +420,7 @@ AI Powered
 <span class="emoji-badge plane-flying-container" style="font-size: 24px; margin-right: 16px; background: rgba(212, 175, 55, 0.1); padding: 10px; border-radius: 12px; display: flex;"><div class="cloud-particle" style="top: 25%; animation-delay: 0s;"></div><div class="cloud-particle" style="top: 50%; animation-delay: 0.4s;"></div><div class="cloud-particle" style="top: 75%; animation-delay: 0.8s;"></div><ion-icon name="airplane" style="color: var(--accent-color); position: relative; z-index: 1;"></ion-icon></span>
 <div class="item-info" style="flex: 1;">
 <h4 style="margin: 0 0 4px; font-size: 15px; color: var(--accent-color); font-weight: 800;">In Transit (Mid-Air)</h4>
-<p style="margin: 0; font-size: 13px; color: var(--text-secondary); font-weight: 500;">Alinea Chicago → Miami Estate</p>
+<p style="margin: 0; font-size: 13px; color: var(--text-secondary); font-weight: 500;">Alinea Chicago -> Miami Estate</p>
 </div>
 <ion-icon name="chevron-forward" style="font-size: 20px; color: var(--accent-color);"></ion-icon>
 </div>
@@ -472,7 +430,7 @@ AI Powered
 <h3 class="section-title">Re-Orders</h3>
 <div class="curated-list re-orders-list" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
 <div class="curated-item" style="display: flex; align-items: center; background: #000; border: 1px solid rgba(255,255,255,0.08); padding: 16px; border-radius: 14px; cursor: pointer; transition: transform 0.2s;">
-<span class="emoji-badge" style="font-size: 24px; margin-right: 16px; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px; display: flex;">🥩</span>
+<span class="emoji-badge" style="font-size: 24px; margin-right: 16px; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px; display: flex;"></span>
 <div class="item-info" style="flex: 1;">
 <h4 style="margin: 0 0 4px; font-size: 15px;">A5 Kobe Wagyu Backup</h4>
 <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">Delivered to Aspen Lodge</p>
@@ -480,9 +438,9 @@ AI Powered
 <ion-icon name="refresh" style="font-size: 20px; color: var(--accent-color);"></ion-icon>
 </div>
 <div class="curated-item" style="display: flex; align-items: center; background: #000; border: 1px solid rgba(255,255,255,0.08); padding: 16px; border-radius: 14px; cursor: pointer; transition: transform 0.2s;">
-<span class="emoji-badge" style="font-size: 24px; margin-right: 16px; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px; display: flex;">🍾</span>
+<span class="emoji-badge" style="font-size: 24px; margin-right: 16px; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px; display: flex;"></span>
 <div class="item-info" style="flex: 1;">
-<h4 style="margin: 0 0 4px; font-size: 15px;">Dom Pérignon Vintage</h4>
+<h4 style="margin: 0 0 4px; font-size: 15px;">Dom Perignon Vintage</h4>
 <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">Delivered to NYC Penthouse</p>
 </div>
 <ion-icon name="refresh" style="font-size: 20px; color: var(--accent-color);"></ion-icon>
@@ -490,15 +448,8 @@ AI Powered
 </div>
 <!-- Past Orders -->
 <h3 class="section-title">Past Deliveries</h3>
-<div class="curated-list" style="display: flex; flex-direction: column; gap: 12px;">
-<div class="curated-item" style="display: flex; align-items: center; background: #000; border: 1px solid rgba(255,255,255,0.08); padding: 16px; border-radius: 14px; cursor: pointer;">
-<span class="emoji-badge" style="font-size: 24px; margin-right: 16px; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px; display: flex;"><ion-icon name="checkmark-circle"></ion-icon></span>
-<div class="item-info" style="flex: 1;">
-<h4 style="margin: 0 0 4px; font-size: 15px;">Le Bernardin Seafood</h4>
-<p style="margin: 0; font-size: 13px; color: var(--text-secondary);">Delivered Oct 12th</p>
-</div>
-<span style="font-size: 14px; font-weight: 700; font-family: monospace;">$4,250</span>
-</div>
+<div class="curated-list" id="past-deliveries-list" style="display: flex; flex-direction: column; gap: 12px;">
+    <!-- Items will be dynamically injected here by app.fetchOrders() -->
 </div>
 </div>
 </section>
@@ -519,7 +470,7 @@ AI Powered
                     </div>
 <div>
 <h3 style="margin: 0 0 4px; font-size: 18px; color: white;">Jordan Smith <span style="font-size: 9px; border: 1px solid rgba(212,175,55,0.4); padding: 2px 6px; border-radius: 4px; color: var(--accent-color); margin-left: 6px; vertical-align: middle;">EXEC</span></h3>
-<div style="font-size: 13px; color: #888;">Member since 2026 · 184 deliveries</div>
+<div style="font-size: 13px; color: #888;">Member since 2026 - 184 deliveries</div>
 </div>
 </div>
 <ion-icon name="chevron-forward" style="color: #666;"></ion-icon>
@@ -539,11 +490,11 @@ AI Powered
 </div>
 <div style="flex: 1; text-align: center; border-right: 1px solid rgba(255,255,255,0.05);">
 <div style="font-size: 20px; color: white; font-weight: 700; margin-bottom: 4px;">12k</div>
-<div style="font-size: 12px; color: #888;">Points · <span style="color: var(--accent-color);">Redeem</span></div>
+<div style="font-size: 12px; color: #888;">Points - <span style="color: var(--accent-color);">Redeem</span></div>
 </div>
 <div style="flex: 1; text-align: center;">
 <div style="font-size: 20px; color: white; font-weight: 700; margin-bottom: 4px;">Gold</div>
-<div style="font-size: 12px; color: #888;">Tier · 2 to Platinum</div>
+<div style="font-size: 12px; color: #888;">Tier - 2 to Platinum</div>
 </div>
 </div>
 </div>
@@ -597,7 +548,7 @@ AI Powered
 </div>
 <div>
 <div style="font-size: 15px; color: white; font-weight: 600; margin-bottom: 2px;">Appearance</div>
-<div style="font-size: 12px; color: #888;">Dark · Auto-sync at sunset</div>
+<div style="font-size: 12px; color: #888;">Dark - Auto-sync at sunset</div>
 </div>
 </div>
 <div style="display: flex; align-items: center; gap: 4px; color: #aaa; font-size: 13px;">
@@ -626,6 +577,7 @@ AI Powered
 <div class="accordion-item">Require Face ID <input checked="" type="checkbox"/></div>
 <div class="accordion-item">Data Sharing <input type="checkbox"/></div>
 <div class="accordion-item"><span style="color: #ff3b30; cursor: pointer;">Clear Search History</span></div>
+<div class="accordion-item"><span onclick="app.deleteAccount()" style="color: #ff3b30; cursor: pointer; font-weight: 700;">Delete Account</span></div>
 </div>
 <!-- Item 5: JetShare -->
 <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px; border-top: 1px solid rgba(255,255,255,0.05); cursor: default;">
@@ -657,8 +609,8 @@ AI Powered
 <div style="display: flex; align-items: center; gap: 12px;">
 <div style="width: 40px; height: 26px; background: #006fcf; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 9px; color: white; font-weight: 800; letter-spacing: 1px;">AMEX</div>
 <div>
-<div style="font-size: 14px; color: white; font-weight: 600; margin-bottom: 2px;">Platinum · 1004</div>
-<div style="font-size: 12px; color: #aaa;">Default · expires 09/28</div>
+<div style="font-size: 14px; color: white; font-weight: 600; margin-bottom: 2px;">Platinum - 1004</div>
+<div style="font-size: 12px; color: #aaa;">Default - expires 09/28</div>
 </div>
 </div>
 <div style="width: 6px; height: 6px; border-radius: 50%; background: #54ec96;"></div>
@@ -685,7 +637,7 @@ AI Powered
 </div>
 <!-- Footer Links -->
 <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 16px; margin-bottom: 30px;">
-<span style="font-size: 12px; color: #666;">v4.2.1 · Help center</span>
+<span style="font-size: 12px; color: #666;">v4.2.1 - Help center</span>
 <span style="font-size: 14px; color: #ff3b30; font-weight: 600; cursor: pointer;">Sign out</span>
 </div>
 </div>
@@ -775,15 +727,17 @@ AI Powered
 <!-- Bottom Navigation -->
 <nav class="bottom-nav">
 <a class="nav-item active" href="#" onclick="app.navigateTab(event, 'home-screen')">
-<img alt="JetSlice Wing" src="jetslice_wing_only.png" style="width: 24px; height: auto; margin-bottom: 4px;"/>
+<span class="plane-flying-container" style="display: flex; justify-content: center; align-items: center; width: 24px; height: 24px; margin-bottom: 4px;">
+    <div class="cloud-particle" style="top: 25%; animation-delay: 0s;"></div>
+    <div class="cloud-particle" style="top: 50%; animation-delay: 0.4s;"></div>
+    <div class="cloud-particle" style="top: 75%; animation-delay: 0.8s;"></div>
+    <ion-icon name="airplane" style="font-size: 20px; position: relative; z-index: 1;"></ion-icon>
+</span>
 <span>Deliver</span>
 </a>
 <a class="nav-item" href="#" onclick="app.navigateTab(event, 'profile-screen')" style="position: relative;">
 <div style="position: relative;">
 <ion-icon name="person"></ion-icon>
-<div class="status-ribbon gold" style="position: absolute; top: -4px; right: -8px; background: linear-gradient(135deg, #FFDF73, #D4AF37); color: #000; padding: 3px; border-radius: 50%; display: flex; justify-content: center; align-items: center; box-shadow: 0 2px 5px rgba(212, 175, 55, 0.5);">
-<ion-icon name="trophy" style="font-size: 10px;"></ion-icon>
-</div>
 </div>
 <span>Profile</span>
 </a>
@@ -833,7 +787,7 @@ AI Powered
 </div>
 <div>
 <h4 style="margin: 0 0 4px 0; font-size: 16px; color: white; display: flex; align-items: center; gap: 6px;">AI Order your Food <ion-icon name="sparkles" style="color: var(--accent-color); font-size: 14px;"></ion-icon></h4>
-<p style="margin: 0; font-size: 13px; color: var(--accent-color);">Direct AI Phone Call • No Fees • Lowest Risk</p>
+<p style="margin: 0; font-size: 13px; color: var(--accent-color);">Direct AI Phone Call  No Fees  Lowest Risk</p>
 </div>
 </div>
 <div id="ai-dispatch-status" style="z-index: 2;"><ion-icon name="chevron-forward" style="color: var(--accent-color); font-size: 20px;"></ion-icon></div>
@@ -843,7 +797,7 @@ AI Powered
 <!-- Uber Eats -->
 <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 16px; display: flex; flex-direction: column; align-items: center; text-align: center; cursor: pointer;">
 <div style="width: 56px; height: 56px; background: #06C167; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; box-shadow: 0 4px 12px rgba(6,193,103,0.3);">
-<img alt="Uber Eats" src="Uber-Eats-Logo.png" style="width: 48px; height: 48px; border-radius: 10px; object-fit: contain;"/>
+<img alt="Uber Eats" src="assets/img/Uber-Eats-Logo.png" style="width: 48px; height: 48px; border-radius: 10px; object-fit: contain;"/>
 </div>
 <h4 style="margin: 0 0 4px 0; font-size: 14px; color: white;">Uber Eats</h4>
 <span style="font-size: 11px; color: var(--text-secondary);">+ 15% Platform Fee</span>
@@ -851,7 +805,7 @@ AI Powered
 <!-- DoorDash -->
 <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 16px; display: flex; flex-direction: column; align-items: center; text-align: center; cursor: pointer;">
 <div style="width: 56px; height: 56px; background: #FF3008; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; box-shadow: 0 4px 12px rgba(255,48,8,0.3);">
-<img alt="DoorDash" src="DoorDash-Logo.png" style="width: 48px; height: 48px; border-radius: 10px; object-fit: contain;"/>
+<img alt="DoorDash" src="assets/img/DoorDash-Logo.png" style="width: 48px; height: 48px; border-radius: 10px; object-fit: contain;"/>
 </div>
 <h4 style="margin: 0 0 4px 0; font-size: 14px; color: white;">DoorDash</h4>
 <span style="font-size: 11px; color: var(--text-secondary);">+ 12% Platform Fee</span>
@@ -859,7 +813,7 @@ AI Powered
 <!-- Grubhub -->
 <div style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 16px; display: flex; flex-direction: column; align-items: center; text-align: center; cursor: pointer;">
 <div style="width: 56px; height: 56px; background: #F66800; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; box-shadow: 0 4px 12px rgba(246,104,0,0.3);">
-<img alt="Grubhub" src="grubhub.png" style="width: 48px; height: 48px; border-radius: 10px; object-fit: contain;"/>
+<img alt="Grubhub" src="assets/img/grubhub.png" style="width: 48px; height: 48px; border-radius: 10px; object-fit: contain;"/>
 </div>
 <h4 style="margin: 0 0 4px 0; font-size: 14px; color: white;">Grubhub</h4>
 <span style="font-size: 11px; color: var(--text-secondary);">Available</span>
@@ -963,7 +917,7 @@ AI Powered
 </div>
 </div>
 </div>
-<button class="dpp-footer-btn" disabled="" id="dpp-dispatch-btn" onclick="app.startMission()">
+<button class="dpp-footer-btn" disabled="" id="dpp-dispatch-btn" onclick="app.startMission(event)">
 <ion-icon name="rocket-outline"></ion-icon>
                 Complete Order
             </button>
@@ -1008,19 +962,19 @@ AI Powered
         <!-- Time Slots -->
         <div id="rmp-time-slots" style="display: flex; flex-direction: column; gap: 10px;">
             <div class="rmp-time-slot" onclick="app.selectScheduleTime(this)" data-price="$1,450">
-                <div style="flex:1;"><div class="rst-time">9:00 AM – 11:00 AM</div><div class="rst-label" style="color:#54ec96;">Optimal Route (Save $332)</div></div>
+                <div style="flex:1;"><div class="rst-time">9:00 AM  11:00 AM</div><div class="rst-label" style="color:#54ec96;">Optimal Route (Save $332)</div></div>
                 <div class="rst-price">$1,450</div>
             </div>
             <div class="rmp-time-slot selected" onclick="app.selectScheduleTime(this)" data-price="$1,782">
-                <div style="flex:1;"><div class="rst-time">12:00 PM – 2:00 PM</div><div class="rst-label">Standard Execution</div></div>
+                <div style="flex:1;"><div class="rst-time">12:00 PM  2:00 PM</div><div class="rst-label">Standard Execution</div></div>
                 <div class="rst-price">$1,782</div>
             </div>
             <div class="rmp-time-slot" onclick="app.selectScheduleTime(this)" data-price="$2,150">
-                <div style="flex:1;"><div class="rst-time">5:00 PM – 7:00 PM</div><div class="rst-label" style="color:#ff3b30;">High Demand Surcharge</div></div>
+                <div style="flex:1;"><div class="rst-time">5:00 PM  7:00 PM</div><div class="rst-label" style="color:#ff3b30;">High Demand Surcharge</div></div>
                 <div class="rst-price">$2,150</div>
             </div>
             <div class="rmp-time-slot" onclick="app.selectScheduleTime(this)" data-price="$1,850">
-                <div style="flex:1;"><div class="rst-time">8:00 PM – 10:00 PM</div><div class="rst-label">Late Night Ops</div></div>
+                <div style="flex:1;"><div class="rst-time">8:00 PM  10:00 PM</div><div class="rst-label">Late Night Ops</div></div>
                 <div class="rst-price">$1,850</div>
             </div>
         </div>
@@ -1035,20 +989,484 @@ AI Powered
 <ion-icon name="trending-down-outline" style="font-size: 14px; flex-shrink:0; margin-top:1px;"></ion-icon>
 <span id="rmp-savings-text">Select a time window to preview your plan</span>
 </div>
-<button class="dpp-footer-btn" id="rmp-book-btn" onclick="app.startMission()">
+<button class="dpp-footer-btn" id="rmp-book-btn" onclick="app.startMission(event)">
 <ion-icon name="rocket-outline"></ion-icon> Book Selected
 </button>
 </div>
 </div></div></div>
-</div></div>
-
-<!-- ====== DRIVER ROW ====== -->
-<div class="driver-row" style="display: flex; flex-direction: column; align-items: center; gap: 20px; margin-top: 80px; margin-bottom: 80px;">
-    <h2 style="color: white; font-family: Inter; margin-bottom: 20px;">As Courier (Driver View)</h2>
-    <!-- Iframe to the driver side app -->
-    <iframe id="driver-iframe" src="driver/index.html" style="width: 100vw; height: 1000px; border: none; overflow: hidden;" title="Driver Interface"></iframe>
 </div>
 
+<!-- ====================================================================
+     NODE NETWORK ARCHITECTURE
+     ==================================================================== -->
+<div class="node-network-section" id="node-network">
+    <div class="nn-title" style="position: absolute; left: 4950px; top: 4300px; width: 600px; text-align: center;">
+        <h2><span>System Architecture</span></h2>
+        <p>Node network connecting client and courier interfaces</p>
+    </div>
+    <svg class="nn-spline-layer" id="nn-splines" style="pointer-events: none; width: 100%; height: 100%;"></svg>
+</div>
+
+<!-- ====== DRIVER ROW ====== -->
+<div class="driver-row" style="position: absolute; left: 6300px; top: 4400px; display: flex; flex-direction: column; align-items: center; gap: 20px; z-index: 2;">
+    <h2 style="color: white; font-family: Inter; margin-bottom: 20px;">As Courier (Driver View)</h2>
+    <div class="iphone-mockup" style="width: 390px; height: 844px; background: #000; border-radius: 40px; box-shadow: 0 0 0 14px #121212, 0 0 0 16px #333, 0 20px 60px rgba(0,0,0,0.8); overflow: hidden; position: relative;">
+        <div class="dynamic-island" style="position: absolute; top: 12px; left: 50%; transform: translateX(-50%); width: 120px; height: 32px; background: #000; border-radius: 20px; z-index: 10;"></div>
+        <iframe id="driver-iframe" src="driver/index.html" style="width: 100%; height: 100%; border: none; overflow: hidden;" title="Driver Interface"></iframe>
+    </div>
+</div>
+</div><!-- /ws-canvas -->
+
+<!-- ======= NODE TOOLBAR (fixed left) ======= -->
+<div id="node-toolbar">
+    <div class="nt-header">
+        <ion-icon name="git-network-outline"></ion-icon> Nodes
+    </div>
+    <div class="nt-item" data-type="backend"    data-icon="server-outline"        data-theme="blue"   data-label="Backend Server"   data-sub="Python / Flask API"><ion-icon name="server-outline"></ion-icon> Backend</div>
+    <div class="nt-item" data-type="ai"          data-icon="sparkles-outline"      data-theme="purple" data-label="AI Engine"         data-sub="GPT + Voice Agent"><ion-icon name="sparkles-outline"></ion-icon> AI Engine</div>
+    <div class="nt-item" data-type="scraper"     data-icon="code-slash-outline"    data-theme="orange" data-label="Web Scraper"       data-sub="Menu extraction"><ion-icon name="code-slash-outline"></ion-icon> Scraper</div>
+    <div class="nt-item" data-type="restaurant"  data-icon="restaurant-outline"    data-theme="orange" data-label="Restaurant Data"   data-sub="Menus & prices"><ion-icon name="restaurant-outline"></ion-icon> Restaurant</div>
+    <div class="nt-item" data-type="order"       data-icon="cart-outline"          data-theme="gold"   data-label="Order Processing"  data-sub="Cart + checkout"><ion-icon name="cart-outline"></ion-icon> Orders</div>
+    <div class="nt-item" data-type="payment"     data-icon="card-outline"          data-theme="gold"   data-label="Payment Gateway"   data-sub="Stripe / AMEX"><ion-icon name="card-outline"></ion-icon> Payment</div>
+    <div class="nt-item" data-type="driver"      data-icon="car-sport-outline"     data-theme="green"  data-label="Driver Matching"   data-sub="Proximity algo"><ion-icon name="car-sport-outline"></ion-icon> Driver</div>
+    <div class="nt-item" data-type="route"       data-icon="navigate-outline"      data-theme="green"  data-label="Route Engine"      data-sub="Multi-modal logistics"><ion-icon name="navigate-outline"></ion-icon> Routes</div>
+    <div class="nt-item" data-type="tracking"    data-icon="location-outline"      data-theme="cyan"   data-label="Live Tracking"     data-sub="GPS + IoT"><ion-icon name="location-outline"></ion-icon> Tracking</div>
+    <div class="nt-item" data-type="iot"         data-icon="thermometer-outline"   data-theme="cyan"   data-label="IoT Sensors"       data-sub="Temp, pressure"><ion-icon name="thermometer-outline"></ion-icon> IoT</div>
+    <div class="nt-item" data-type="notify"      data-icon="notifications-outline" data-theme="red"    data-label="Notifications"     data-sub="Push, SMS"><ion-icon name="notifications-outline"></ion-icon> Notify</div>
+    <div class="nt-divider"></div>
+    <div class="nt-item nt-clear" onclick="nodeEditor.clearAll()"><ion-icon name="trash-outline"></ion-icon> Clear All</div>
+</div>
+
+<!-- Zoom Controls -->
+<div id="zoom-controls">
+    <button onclick="document.body.classList.toggle('arch-hidden')" title="Toggle Architecture Visibility" style="margin-bottom: 8px;"><ion-icon name="eye-outline"></ion-icon></button>
+    <button onclick="wsZoom(0.1)" title="Zoom In">+</button>
+    <div class="zoom-pct" id="zoom-pct">55%</div>
+    <button onclick="wsZoom(-0.1)" title="Zoom Out">&minus;</button>
+    <button onclick="wsReset()" title="Reset" style="font-size:12px; margin-top:2px;">R</button>
+</div>
+
+<!-- Spline preview layer (drawn while dragging a new connection) -->
+<svg id="spline-preview" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:99998;"></svg>
+
 <script src="app.js?v=6"></script>
+<script>
+/* ======= ZOOM / PAN WORKSPACE ======= */
+var _wsScale = 0.45, _wsPanX = 0, _wsPanY = 0;
+(function(){
+    var canvas = document.getElementById('ws-canvas');
+    var isPanning = false, startX = 0, startY = 0;
+
+    function apply() {
+        canvas.style.transform = 'translate(' + _wsPanX + 'px,' + _wsPanY + 'px) scale(' + _wsScale + ')';
+        var pct = document.getElementById('zoom-pct');
+        if (pct) pct.textContent = Math.round(_wsScale * 100) + '%';
+    }
+
+    function centerView() {
+        _wsPanX = window.innerWidth / 2;
+        _wsPanY = window.innerHeight / 2;
+        apply();
+    }
+    setTimeout(centerView, 500);
+
+    document.body.addEventListener('wheel', function(e) {
+        if (e.target.closest('#zoom-controls') || e.target.closest('#node-toolbar')) return;
+        e.preventDefault();
+        var d = e.deltaY > 0 ? -0.04 : 0.04;
+        var old = _wsScale;
+        _wsScale = Math.max(0.08, Math.min(3, _wsScale + d));
+        _wsPanX = e.clientX - (e.clientX - _wsPanX) * (_wsScale / old);
+        _wsPanY = e.clientY - (e.clientY - _wsPanY) * (_wsScale / old);
+        apply();
+    }, {passive:false});
+
+    document.body.addEventListener('mousedown', function(e) {
+        if (e.target.closest('#zoom-controls') || e.target.closest('#node-toolbar')) return;
+        if (e.target.closest('.nn-node') || e.target.closest('.nn-port')) return;
+        if (e.target.closest('.iphone-mockup') || e.target.closest('iframe')) return;
+        isPanning = true;
+        startX = e.clientX - _wsPanX;
+        startY = e.clientY - _wsPanY;
+        canvas.classList.add('panning');
+        e.preventDefault();
+    });
+    document.addEventListener('mousemove', function(e) {
+        if (!isPanning) return;
+        _wsPanX = e.clientX - startX;
+        _wsPanY = e.clientY - startY;
+        apply();
+    });
+    document.addEventListener('mouseup', function() {
+        if (isPanning) { isPanning = false; canvas.classList.remove('panning'); }
+    });
+
+    window.wsZoom = function(d) { _wsScale = Math.max(0.08, Math.min(3, _wsScale + d)); apply(); };
+    window.wsReset = function() { _wsScale = 0.45; centerView(); };
+    apply();
+})();
+
+/* ======= INTERACTIVE NODE EDITOR ======= */
+var nodeEditor = (function(){
+    var container = document.getElementById('node-network');
+    var splineSvg = document.getElementById('nn-splines');
+    var previewSvg = document.getElementById('spline-preview');
+    if (!container || !splineSvg) return { addNode:function(){}, clearAll:function(){}, createSpline:function(){} };
+
+    var placedNodes = [];
+    var splines = [];
+    var nodeCounter = 0;
+
+    /* === TOOLBAR === */
+    document.querySelectorAll('.nt-item:not(.nt-clear)').forEach(function(item) {
+        item.addEventListener('click', function() {
+            addNode(item.dataset.type, item.dataset.icon, item.dataset.theme, item.dataset.label, item.dataset.sub,
+                    250 + Math.random() * 800, 80 + Math.random() * 500);
+        });
+    });
+
+    function addNode(type, icon, theme, label, sub, x, y, details, status) {
+        var id = 'nd-' + (++nodeCounter);
+        var div = document.createElement('div');
+        div.className = 'nn-node';
+        div.id = id;
+        div.setAttribute('data-theme', theme);
+        div.style.left = x + 'px';
+        div.style.top = y + 'px';
+        
+        var detHtml = details ? '<div class="nn-details">' + details + '</div>' : '';
+        var dotClass = status === 'complete' ? 'complete' : (status === 'pending' ? 'pending' : 'incomplete');
+        var dotHtml = status ? '<div class="nn-status-dot ' + dotClass + '" title="Implementation: ' + status + '"></div>' : '';
+
+        div.innerHTML =
+            '<div class="nn-node-header"><div class="nn-node-icon"><ion-icon name="' + icon + '"></ion-icon></div>' +
+            '<span class="nn-node-title">' + label + '</span>' + dotHtml + '</div><div class="nn-node-sub">' + sub + '</div>' + detHtml;
+
+        ['left','right','top','bottom'].forEach(function(side) {
+            var port = document.createElement('div');
+            port.className = 'nn-port ' + side;
+            port.dataset.port = side;
+            port.dataset.nodeId = id;
+            port.addEventListener('mousedown', function(e) {
+                e.stopPropagation(); e.preventDefault();
+                startSplineDraw(id, side, e);
+            });
+            div.appendChild(port);
+        });
+
+        div.addEventListener('mousedown', function(e) {
+            if (e.target.closest('.nn-port')) return;
+            e.stopPropagation(); e.preventDefault();
+            startNodeDrag(id, e);
+        });
+
+        container.appendChild(div);
+        var ro = new ResizeObserver(function() { refreshSplines(); });
+        ro.observe(div);
+
+        var nodeObj = {id:id, el:div, x:x, y:y, type:type, theme:theme};
+        placedNodes.push(nodeObj);
+        return id;
+    }
+
+    /* === NODE DRAGGING (fixed coordinate tracking) === */
+    function startNodeDrag(nodeId, e) {
+        var node = placedNodes.find(function(n){return n.id===nodeId;});
+        if (!node) return;
+        node.el.classList.add('dragging');
+        var startMX = e.clientX, startMY = e.clientY;
+        var startNX = node.x, startNY = node.y;
+        var isClick = true;
+
+        function onMove(ev) {
+            if (Math.abs(ev.clientX - startMX) > 3 || Math.abs(ev.clientY - startMY) > 3) isClick = false;
+            /* Convert screen-space delta to local-space delta using current scale */
+            var dx = (ev.clientX - startMX) / _wsScale;
+            var dy = (ev.clientY - startMY) / _wsScale;
+            node.x = startNX + dx;
+            node.y = startNY + dy;
+            node.el.style.left = node.x + 'px';
+            node.el.style.top = node.y + 'px';
+            refreshSplines();
+        }
+        function onUp() {
+            node.el.classList.remove('dragging');
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+            if (isClick) {
+                node.el.classList.toggle('expanded');
+            }
+        }
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+    }
+
+    /* === SPLINE DRAWING === */
+    function startSplineDraw(fromNodeId, fromPort, e) {
+        var preview = document.createElementNS('http://www.w3.org/2000/svg','path');
+        preview.setAttribute('stroke','rgba(212,175,55,0.6)');
+        preview.setAttribute('stroke-width','2');
+        preview.setAttribute('fill','none');
+        preview.setAttribute('stroke-dasharray','6 4');
+        previewSvg.appendChild(preview);
+
+        var fromScreen = getPortScreenPos(fromNodeId, fromPort);
+
+        function onMove(ev) {
+            var d = screenCubic(fromScreen.x, fromScreen.y, ev.clientX, ev.clientY, fromPort, 'left');
+            preview.setAttribute('d', d);
+        }
+        function onUp(ev) {
+            previewSvg.innerHTML = '';
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+
+            /* Find nearest port within 25px radius */
+            var best = findNearestPort(ev.clientX, ev.clientY, fromNodeId);
+            if (best) {
+                createSpline(fromNodeId, fromPort, best.nodeId, best.port);
+            }
+        }
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+    }
+
+    /* Find the closest port to a screen coordinate */
+    function findNearestPort(sx, sy, excludeNodeId) {
+        var best = null, bestDist = 30; /* 30px radius */
+        placedNodes.forEach(function(n) {
+            if (n.id === excludeNodeId) return;
+            ['left','right','top','bottom'].forEach(function(p) {
+                var pos = getPortScreenPos(n.id, p);
+                var dist = Math.sqrt(Math.pow(pos.x - sx, 2) + Math.pow(pos.y - sy, 2));
+                if (dist < bestDist) { bestDist = dist; best = {nodeId: n.id, port: p}; }
+            });
+        });
+        /* Check phone anchors */
+        ['__client__','__driver__'].forEach(function(pid) {
+            if (pid === excludeNodeId) return;
+            var testPorts = pid === '__client__' ? ['bottom','right'] : ['bottom','left'];
+            testPorts.forEach(function(p) {
+                var pos = getPortScreenPos(pid, p);
+                var dist = Math.sqrt(Math.pow(pos.x - sx, 2) + Math.pow(pos.y - sy, 2));
+                if (dist < bestDist) { bestDist = dist; best = {nodeId: pid, port: p}; }
+            });
+        });
+        return best;
+    }
+
+    /* Screen-space position of a port */
+    function getPortScreenPos(nodeId, port) {
+        if (nodeId === '__client__' || nodeId === '__driver__') {
+            var row = document.querySelector(nodeId === '__client__' ? '.production-row' : '.driver-row');
+            if (!row) return {x:0,y:0};
+            var r = row.getBoundingClientRect();
+            if (nodeId === '__client__' && port === 'right') return {x: r.right - 20, y: r.top + r.height/2};
+            if (nodeId === '__driver__' && port === 'left') return {x: r.left + 20, y: r.top + r.height/2};
+            return {x: r.left + r.width/2, y: r.bottom - 20};
+        }
+        var node = placedNodes.find(function(n){return n.id===nodeId;});
+        if (!node) return {x:0,y:0};
+        var portEl = node.el.querySelector('.nn-port.' + port);
+        if (portEl) {
+            var pr = portEl.getBoundingClientRect();
+            return {x: pr.left + pr.width/2, y: pr.top + pr.height/2};
+        }
+        return {x:0,y:0};
+    }
+
+    /* Local (SVG viewBox) position of a port */
+    function getPortLocalPos(nodeId, port) {
+        if (nodeId === '__client__' || nodeId === '__driver__') {
+            var row = document.querySelector(nodeId === '__client__' ? '.production-row' : '.driver-row');
+            if (!row) return {x:0,y:0};
+            var left = parseFloat(row.style.left) || 0;
+            var top = parseFloat(row.style.top) || 0;
+            if (nodeId === '__client__') {
+                if (port === 'right') return {x: left + 390, y: top + 450};
+                return {x: left + 200, y: top + 900};
+            }
+            if (nodeId === '__driver__') {
+                if (port === 'left') return {x: left, y: top + 450};
+                return {x: left + 200, y: top + 900};
+            }
+        }
+        var node = placedNodes.find(function(n){return n.id===nodeId;});
+        if (!node) return {x:0,y:0};
+        var w = node.el.offsetWidth || 170, h = node.el.offsetHeight || 70;
+        switch(port) {
+            case 'left':   return {x: node.x,       y: node.y + h/2};
+            case 'right':  return {x: node.x + w,   y: node.y + h/2};
+            case 'top':    return {x: node.x + w/2, y: node.y};
+            case 'bottom': return {x: node.x + w/2, y: node.y + h};
+        }
+        return {x: node.x, y: node.y};
+    }
+
+    function screenCubic(x1,y1,x2,y2,fp,tp) {
+        var t = Math.max(Math.abs(x2-x1), Math.abs(y2-y1)) * 0.4;
+        var c1x=x1,c1y=y1,c2x=x2,c2y=y2;
+        if(fp==='right')c1x+=t; else if(fp==='left')c1x-=t;
+        else if(fp==='bottom')c1y+=t; else if(fp==='top')c1y-=t;
+        if(tp==='right')c2x+=t; else if(tp==='left')c2x-=t;
+        else if(tp==='bottom')c2y+=t; else if(tp==='top')c2y-=t;
+        return 'M '+x1+','+y1+' C '+c1x+','+c1y+' '+c2x+','+c2y+' '+x2+','+y2;
+    }
+
+    function localCubic(x1,y1,x2,y2,fp,tp) {
+        var t = Math.max(Math.abs(x2-x1), Math.abs(y2-y1)) * 0.4;
+        var c1x=x1,c1y=y1,c2x=x2,c2y=y2;
+        if(fp==='right')c1x+=t; else if(fp==='left')c1x-=t;
+        else if(fp==='bottom')c1y+=t; else if(fp==='top')c1y-=t;
+        if(tp==='right')c2x+=t; else if(tp==='left')c2x-=t;
+        else if(tp==='bottom')c2y+=t; else if(tp==='top')c2y-=t;
+        return 'M '+x1+','+y1+' C '+c1x+','+c1y+' '+c2x+','+c2y+' '+x2+','+y2;
+    }
+
+    function createSpline(fromId, fromPort, toId, toPort) {
+        var p1 = getPortLocalPos(fromId, fromPort);
+        var p2 = getPortLocalPos(toId, toPort);
+        var d = localCubic(p1.x, p1.y, p2.x, p2.y, fromPort, toPort);
+
+        var path = document.createElementNS('http://www.w3.org/2000/svg','path');
+        path.setAttribute('d', d);
+        path.setAttribute('class', 'nn-spline flow');
+        path.setAttribute('stroke', 'rgba(212,175,55,0.35)');
+        splineSvg.appendChild(path);
+
+        var circle = document.createElementNS('http://www.w3.org/2000/svg','circle');
+        circle.setAttribute('r','3');
+        circle.setAttribute('fill','#d4af37');
+        circle.style.filter = 'drop-shadow(0 0 4px rgba(212,175,55,0.8))';
+        var anim = document.createElementNS('http://www.w3.org/2000/svg','animateMotion');
+        anim.setAttribute('dur', (2 + Math.random()*2) + 's');
+        anim.setAttribute('repeatCount','indefinite');
+        anim.setAttribute('path', d);
+        circle.appendChild(anim);
+        splineSvg.appendChild(circle);
+
+        splines.push({fromId:fromId, fromPort:fromPort, toId:toId, toPort:toPort, pathEl:path, particleEl:circle});
+    }
+
+    function refreshSplines() {
+        splines.forEach(function(s) {
+            var p1 = getPortLocalPos(s.fromId, s.fromPort);
+            var p2 = getPortLocalPos(s.toId, s.toPort);
+            var d = localCubic(p1.x, p1.y, p2.x, p2.y, s.fromPort, s.toPort);
+            s.pathEl.setAttribute('d', d);
+            var mot = s.particleEl.querySelector('animateMotion');
+            if (mot) {
+                mot.setAttribute('path', d);
+                s.particleEl.parentNode.removeChild(s.particleEl);
+                splineSvg.appendChild(s.particleEl);
+            }
+        });
+    }
+
+    function clearAll() {
+        placedNodes.forEach(function(n){ n.el.remove(); });
+        placedNodes = [];
+        splines = [];
+        splineSvg.innerHTML = '';
+    }
+
+    splineSvg.setAttribute('viewBox','0 0 10000 10000');
+
+    /* === PRE-POPULATE: Commercial App Pipeline === */
+    setTimeout(function(){
+        /* Column labels */
+        var cols = [
+            {label:'Security & Edge', x: 4250},
+            {label:'Data & Logic', x: 4600},
+            {label:'Core Platform', x: 4950},
+            {label:'Dispatch Operations', x: 5300},
+            {label:'Delivery & Telemetry', x: 5650}
+        ];
+        cols.forEach(function(c){
+            var lbl = document.createElement('div');
+            lbl.className = 'nn-col-label';
+            lbl.style.left = c.x + 'px';
+            lbl.style.top = '4360px'; /* Shifted up slightly */
+            lbl.textContent = c.label;
+            container.appendChild(lbl);
+        });
+
+        /* ---- COLUMN 1: Security & Edge ---- */
+        addNode('gateway', 'shield-checkmark-outline', 'purple', 'API Gateway', 'WAF / Rate Limit', 4250, 4420, 'Terminates SSL and blocks DDoS. Required by Apple App Store to secure encrypted transit (HTTPS) and stabilize backend load.', 'complete');
+        addNode('iam', 'finger-print-outline', 'blue', 'Auth & Identity', 'Sign in with Apple', 4250, 4580, 'Manages OAuth and JWT issuance. Apple strictly mandates "Sign in with Apple" for any app utilizing 3rd-party logins.', 'complete');
+        addNode('fraud', 'scan-outline', 'red', 'Fraud Engine', 'Risk Assessment', 4250, 4740, 'Analyzes device fingerprints and IP telemetry to block malicious actors, chargebacks, and fake accounts.', 'complete');
+
+        /* ---- COLUMN 2: Data Sources ---- */
+        addNode('scraper', 'code-slash-outline', 'orange', 'Web Scraper', 'Menu extraction', 4600, 4420, 'Automated procurement of restaurant data directly from web sources.', 'complete');
+        addNode('restaurant', 'restaurant-outline', 'orange', 'Restaurant DB', 'Menus, prices', 4600, 4580, 'Canonical database storing active menus, prices, and operating hours for rapid querying.', 'complete');
+        addNode('kms', 'key-outline', 'blue', 'Key Management', 'Data Encryption', 4600, 4740, 'Hardware-backed encryption-at-rest for PII (names, locations). Essential for Apple privacy compliance.', 'complete');
+        addNode('iot', 'thermometer-outline', 'cyan', 'IoT Sensors', 'Cargo telemetry', 4600, 4900, 'Real-time telemetry measuring courier temperature and cargo integrity for luxury food delivery.', 'complete');
+
+        /* ---- COLUMN 3: Core Platform ---- */
+        addNode('ai', 'sparkles-outline', 'purple', 'AI Engine', 'Recommendations', 4950, 4420, 'Predictive modeling engine for contextual search and personalized user recommendations.', 'complete');
+        addNode('backend', 'server-outline', 'blue', 'Microservices', 'Flask / Node API', 4950, 4580, 'Core business logic API orchestrating all internal requests and coordinating database operations.', 'complete');
+        addNode('order', 'cart-outline', 'gold', 'Order Processing', 'Cart validation', 4950, 4740, 'Validates items, applies taxation, handles checkout flows and final receipt generation.', 'complete');
+        addNode('payment', 'card-outline', 'gold', 'Payment Gateway', 'Apple Pay / Stripe', 4950, 4900, 'PCI-compliant integration with Apple Pay. Apple requires secure tokenization for physical goods transactions.', 'complete');
+
+        /* ---- COLUMN 4: Dispatch ---- */
+        addNode('driver', 'car-sport-outline', 'green', 'Driver Matching', 'Assignment algo', 5300, 4420, 'Proximity-based algorithms that match incoming orders to the most optimal active courier.', 'complete');
+        addNode('route', 'navigate-outline', 'green', 'Route Engine', 'Multi-modal paths', 5300, 4580, 'Interfaces with Mapbox directions API to dynamically calculate multi-modal logistic paths.', 'complete');
+        addNode('tracking', 'location-outline', 'cyan', 'Live Tracking', 'WebSocket GPS', 5300, 4740, 'Maintains persistent WebSocket connections for sub-second GPS telemetry and map marker updates.', 'complete');
+        addNode('db', 'server-outline', 'blue', 'Data Lake', 'PostgreSQL', 5300, 4900, 'Highly available ACID-compliant storage for transactions, ensuring zero data loss during dispatch.', 'complete');
+
+        /* ---- COLUMN 5: Delivery & Ops ---- */
+        addNode('notify', 'notifications-outline', 'red', 'Notification Service', 'Push / SMS', 5650, 4420, 'Event-driven message bus dispatching SMS, email, and native push notifications to clients.', 'complete');
+        addNode('apns', 'logo-apple', 'purple', 'APNs Service', 'Background Push', 5650, 4580, 'Direct integration with Apple Push Notification service using certificate authentication for reliable native delivery.', 'complete');
+        addNode('telemetry', 'pulse-outline', 'cyan', 'App Telemetry', 'Datadog Logging', 5650, 4740, 'Tracks crash reports and fatal errors necessary for App Store review compliance and SLA monitoring.', 'complete');
+
+        /* ===== SPLINE CONNECTIONS ===== */
+
+        /* Flows from Client */
+        createSpline('__client__','right', 'nd-1','left'); /* Client -> Gateway */
+        
+        /* Gateway/Security */
+        createSpline('nd-1','right', 'nd-2','top');    /* Gateway -> IAM */
+        createSpline('nd-1','right', 'nd-9','left');   /* Gateway -> Backend */
+        createSpline('nd-1','bottom', 'nd-3','top');   /* Gateway -> Fraud */
+        
+        /* Intelligence & Data -> Backend */
+        createSpline('nd-4','right', 'nd-8','left');   /* Scraper -> AI */
+        createSpline('nd-5','right', 'nd-9','left');   /* Restaurant DB -> Backend */
+        createSpline('nd-6','right', 'nd-9','left');   /* KMS -> Backend */
+        
+        /* Backend core */
+        createSpline('nd-9','right', 'nd-10','left');  /* Backend -> Order */
+        createSpline('nd-9','bottom', 'nd-15','top');  /* Backend -> DB (15 is db) */
+        createSpline('nd-2','right', 'nd-9','top');    /* IAM -> Backend */
+        createSpline('nd-3','right', 'nd-9','bottom'); /* Fraud -> Backend */
+        createSpline('nd-8','right', 'nd-9','top');    /* AI -> Backend */
+        
+        /* Orders & Payment */
+        createSpline('nd-10','bottom', 'nd-11','top'); /* Order -> Payment */
+        createSpline('nd-10','right', 'nd-12','left'); /* Order -> Driver Matching */
+        
+        /* Dispatch */
+        createSpline('nd-12','bottom', 'nd-13','top'); /* Driver -> Route */
+        createSpline('nd-13','bottom', 'nd-14','left');/* Route -> Tracking */
+        createSpline('nd-7','right', 'nd-14','left');  /* IoT -> Tracking */
+        
+        /* Delivery & Telemetry */
+        createSpline('nd-12','right', 'nd-16','left'); /* Driver -> Notify */
+        createSpline('nd-16','bottom', 'nd-17','top'); /* Notify -> APNs */
+        createSpline('nd-15','right', 'nd-18','left'); /* DB -> Telemetry */
+        
+        /* Feeds back to Client */
+        createSpline('nd-17','right', '__client__','bottom'); /* APNs -> Client */
+        createSpline('nd-14','right', '__client__','right');  /* Tracking -> Client */
+
+        /* Driver feeds */
+        createSpline('nd-12','right', '__driver__','left'); /* Driver -> Driver Phone */
+        createSpline('nd-13','right', '__driver__','left'); /* Route -> Driver Phone */
+        createSpline('nd-16','right', '__driver__','left'); /* Notify -> Driver Phone */
+    }, 600);
+
+    return { addNode:addNode, clearAll:clearAll, createSpline:createSpline };
+})();
+</script>
 </body>
 </html>

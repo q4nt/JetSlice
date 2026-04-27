@@ -26,6 +26,14 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from menu_scraper import scrape_restaurant_menu
 
 # ---------------------------------------------------------------------------
+# We assume this script runs from inside the backend/ folder.
+CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'menu_cache.json')
+
+def save_cache(data):
+    with open(CACHE_FILE, 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+# ---------------------------------------------------------------------------
 # All 16 Trending Emoji Restaurants (from app.js + sentiment-recommendations)
 # ---------------------------------------------------------------------------
 EMOJI_RESTAURANTS = [
@@ -161,9 +169,6 @@ EMOJI_RESTAURANTS = [
         "foodItem": "Pork XLB & Truffle Fried Rice"
     },
 ]
-
-
-CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'menu_cache.json')
 
 
 def precollect_all():

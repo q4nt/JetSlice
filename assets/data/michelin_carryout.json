@@ -1,0 +1,44 @@
+[
+    {
+        "name": "",
+        "location": "Chicago, IL",
+        "stars": "Michelin Starred",
+        "carryout": true,
+        "cuisine": "Fine Dining"
+    },
+    {
+        "name": "",
+        "location": "Chicago, IL",
+        "stars": "Michelin Starred",
+        "carryout": true,
+        "cuisine": "Fine Dining"
+    },
+    {
+        "name": "",
+        "location": "Chicago, IL",
+        "stars": "Michelin Starred",
+        "carryout": true,
+        "cuisine": "Fine Dining"
+    },
+    {
+        "name": "\u2014",
+        "location": "Chicago, IL",
+        "stars": "Michelin Starred",
+        "carryout": true,
+        "cuisine": "Fine Dining"
+    },
+    {
+        "name": "Closed",
+        "location": "Chicago, IL",
+        "stars": "Michelin Starred",
+        "carryout": true,
+        "cuisine": "Fine Dining"
+    },
+    {
+        "name": "",
+        "location": "Chicago, IL",
+        "stars": "Michelin Starred",
+        "carryout": true,
+        "cuisine": "Fine Dining"
+    }
+]

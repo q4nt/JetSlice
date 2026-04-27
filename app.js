@@ -1,6 +1,148 @@
 const app = {
     activeMissions: 0,
     jetShareEnabled: false,
+    _isAuthenticated: false,
+    _sessionJwt: null,
+
+    // Auth & Persistence Actions
+    showAuthScreen() {
+        const sim = document.getElementById('active-iphone-simulator');
+        if (sim) {
+            sim.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        }
+        document.getElementById('auth-screen').classList.add('active');
+    },
+
+    _updateAuthUI() {
+        const icon = document.getElementById('header-action-icon');
+        const text = document.getElementById('header-action-text');
+        if (!icon || !text) return;
+        
+        if (this._isAuthenticated) {
+            icon.name = 'receipt-outline';
+            text.textContent = 'Orders';
+        } else {
+            icon.name = 'person-circle-outline';
+            text.textContent = 'Sign in';
+        }
+    },
+
+    handleHeaderAction(event) {
+        if (this._isAuthenticated) {
+            this.navigateTab(event, 'orders-screen');
+        } else {
+            this.showAuthScreen();
+        }
+    },
+
+    async signInWithApple() {
+        const authBtn = document.querySelector('#auth-screen button');
+        const origHtml = authBtn.innerHTML;
+        authBtn.innerHTML = '<span class="btn-loader" style="border-color: black; border-top-color: transparent;"></span> Authenticating...';
+        authBtn.disabled = true;
+
+        try {
+            const resp = await fetch('/api/auth/apple', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ apple_identity_token: "MOCK_APPLE_ID_TOKEN" })
+            });
+            const data = await resp.json();
+            
+            if (data.status === 'success') {
+                this._isAuthenticated = true;
+                this._sessionJwt = data.session_jwt;
+                this._updateAuthUI();
+
+                document.getElementById('auth-screen').classList.remove('active');
+                document.getElementById('home-screen').classList.add('active');
+            } else {
+                alert(data.error || "Authentication failed.");
+                authBtn.innerHTML = origHtml;
+                authBtn.disabled = false;
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Network error. Could not connect to backend.");
+            authBtn.innerHTML = origHtml;
+            authBtn.disabled = false;
+        }
+    },
+    
+    async deleteAccount() {
+        if (!this._isAuthenticated) {
+            alert("You must be signed in to delete your account.");
+            return;
+        }
+        if (!confirm("Are you sure you want to permanently delete your account? This action cannot be undone and will erase all delivery history.")) {
+            return;
+        }
+        
+        try {
+            const resp = await fetch('/api/account/delete', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + this._sessionJwt
+                }
+            });
+            const data = await resp.json();
+            
+            if (data.status === 'success') {
+                alert("Account deleted successfully.");
+                this._isAuthenticated = false;
+                this._sessionJwt = null;
+                this._updateAuthUI();
+
+                const sim = document.getElementById('active-iphone-simulator');
+                if (sim) sim.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+                document.getElementById('home-screen').classList.add('active');
+                
+                const navItems = document.querySelectorAll('.bottom-nav .nav-item');
+                navItems.forEach(item => item.classList.remove('active'));
+                if (navItems.length > 0) navItems[0].classList.add('active');
+            } else {
+                alert(data.error || "Failed to delete account.");
+            }
+        } catch(e) {
+            console.error(e);
+            alert("Network error.");
+        }
+    },
+
+    async fetchOrders() {
+        try {
+            const resp = await fetch('/api/orders');
+            const data = await resp.json();
+            if (data.status === 'success' && document.getElementById('past-deliveries-list')) {
+                const container = document.getElementById('past-deliveries-list');
+                container.innerHTML = '';
+                
+                if (data.orders.length === 0) {
+                    container.innerHTML = '<p style="color: #666; font-size: 13px; text-align: center; padding: 20px;">No past deliveries found.</p>';
+                    return;
+                }
+                
+                data.orders.forEach(order => {
+                    const date = new Date(order.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    const price = '$' + (order.total_cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2 });
+                    
+                    container.innerHTML += `
+                        <div class="curated-item" style="display: flex; align-items: center; background: #000; border: 1px solid rgba(255,255,255,0.08); padding: 16px; border-radius: 14px; cursor: pointer;">
+                            <span class="emoji-badge" style="font-size: 24px; margin-right: 16px; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 12px; display: flex;">${order.emoji}</span>
+                            <div class="item-info" style="flex: 1;">
+                                <h4 style="margin: 0 0 4px; font-size: 15px;">${order.item_name}</h4>
+                                <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">Delivered ${date}</p>
+                            </div>
+                            <span style="font-size: 14px; font-weight: 700; font-family: monospace;">${price}</span>
+                        </div>
+                    `;
+                });
+            }
+        } catch(e) {
+            console.error("Failed to fetch orders:", e);
+        }
+    },
     setMissionState(count) {
         this.activeMissions = count;
         if (this.activeMissions === 0) {
@@ -86,7 +228,7 @@ const app = {
                 }
             });
 
-            // Pulsating glow animation — fires every 5s, gentle ease in/out
+            // Pulsating glow animation  fires every 5s, gentle ease in/out
             this._pulseUSABoundary(mapInstance);
         }
     },
@@ -133,72 +275,72 @@ const app = {
         this.trendingFeatures = [
             {
                 type: 'Feature',
-                properties: { emoji: '🍕', restaurant: "L'Industrie Pizzeria", origin: "104 Christopher St, New York, NY", dest: "Beverly Hills, CA", cargo: "heated", foodItem: "Signature Artisan Pizza", ratings: { yelp: '4.8', uberEats: '4.9', reddit: '10/10' }, reviewText: "\"The crust was still perfectly crisp upon arrival! Literal magic.\" - Reddit User" },
+                properties: { emoji: '', restaurant: "L'Industrie Pizzeria", origin: "104 Christopher St, New York, NY", dest: "Beverly Hills, CA", cargo: "heated", foodItem: "Signature Artisan Pizza", ratings: { yelp: '4.8', uberEats: '4.9', reddit: '10/10' }, reviewText: "\"The crust was still perfectly crisp upon arrival! Literal magic.\" - Reddit User" },
                 geometry: { type: 'Point', coordinates: [-74.0041, 40.7335] }
             },
             {
                 type: 'Feature',
-                properties: { emoji: '🍣', restaurant: "Sushi Roku", origin: "Los Angeles, CA", dest: "Manhattan, NY", cargo: "refrigerated", foodItem: "Premium Omakase Box", ratings: { yelp: '4.6', uberEats: '4.8', reddit: '9.5/10' }, reviewText: "\"Arrived ice cold. Tasted like I was eating it right at the sushi bar in LA!\" - Uber Eats User" },
+                properties: { emoji: '', restaurant: "Sushi Roku", origin: "Los Angeles, CA", dest: "Manhattan, NY", cargo: "refrigerated", foodItem: "Premium Omakase Box", ratings: { yelp: '4.6', uberEats: '4.8', reddit: '9.5/10' }, reviewText: "\"Arrived ice cold. Tasted like I was eating it right at the sushi bar in LA!\" - Uber Eats User" },
                 geometry: { type: 'Point', coordinates: [-118.2437, 34.0522] }
             },
             {
                 type: 'Feature',
-                properties: { emoji: '🌯', restaurant: "La Taqueria", origin: "San Francisco, CA", dest: "Chicago, IL", cargo: "heated", foodItem: "Carne Asada Super Burrito", ratings: { yelp: '4.5', uberEats: '4.7', reddit: '9/10' }, reviewText: "\"Still piping hot and fully intact across the country. Highly recommend.\" - Yelp Reviewer" },
+                properties: { emoji: '', restaurant: "La Taqueria", origin: "San Francisco, CA", dest: "Chicago, IL", cargo: "heated", foodItem: "Carne Asada Super Burrito", ratings: { yelp: '4.5', uberEats: '4.7', reddit: '9/10' }, reviewText: "\"Still piping hot and fully intact across the country. Highly recommend.\" - Yelp Reviewer" },
                 geometry: { type: 'Point', coordinates: [-122.4194, 37.7749] }
             },
             {
                 type: 'Feature',
-                properties: { emoji: '🍔', restaurant: "Au Cheval", origin: "Chicago, IL", dest: "Miami, FL", cargo: "heated", foodItem: "Double Cheeseburger", ratings: { yelp: '4.7', uberEats: '4.9', reddit: '10/10' }, reviewText: "\"Hands down the greatest burger to ever cross state lines.\" - Reddit User" },
+                properties: { emoji: '', restaurant: "Au Cheval", origin: "Chicago, IL", dest: "Miami, FL", cargo: "heated", foodItem: "Double Cheeseburger", ratings: { yelp: '4.7', uberEats: '4.9', reddit: '10/10' }, reviewText: "\"Hands down the greatest burger to ever cross state lines.\" - Reddit User" },
                 geometry: { type: 'Point', coordinates: [-87.6298, 41.8781] }
             },
             {
                 type: 'Feature',
-                properties: { emoji: '🍗', restaurant: "Gus's Fried Chicken", origin: " Memphis, TN", dest: "New York, NY", cargo: "heated", foodItem: "Spicy Fried Chicken Plate", ratings: { yelp: '4.6', uberEats: '4.8', reddit: '9.5/10' }, reviewText: "\"Still perfectly crunchy. This delivery service is unbelievable.\" - Yelp Reviewer" },
+                properties: { emoji: '', restaurant: "Gus's Fried Chicken", origin: " Memphis, TN", dest: "New York, NY", cargo: "heated", foodItem: "Spicy Fried Chicken Plate", ratings: { yelp: '4.6', uberEats: '4.8', reddit: '9.5/10' }, reviewText: "\"Still perfectly crunchy. This delivery service is unbelievable.\" - Yelp Reviewer" },
                 geometry: { type: 'Point', coordinates: [-90.0490, 35.1495] }
             },
             {
                 type: 'Feature',
-                properties: { emoji: '🦀', restaurant: "Joe's Stone Crab", origin: "Miami, FL", dest: "Denver, CO", cargo: "refrigerated", foodItem: "Large Stone Crab Claws", ratings: { yelp: '4.4', uberEats: '4.5', reddit: '8.5/10' }, reviewText: "\"Fresh from the coast! The mustard sauce was pristine.\" - Reddit User" },
+                properties: { emoji: '', restaurant: "Joe's Stone Crab", origin: "Miami, FL", dest: "Denver, CO", cargo: "refrigerated", foodItem: "Large Stone Crab Claws", ratings: { yelp: '4.4', uberEats: '4.5', reddit: '8.5/10' }, reviewText: "\"Fresh from the coast! The mustard sauce was pristine.\" - Reddit User" },
                 geometry: { type: 'Point', coordinates: [-80.1918, 25.7617] }
             },
             {
                 type: 'Feature',
-                properties: { emoji: '🌮', restaurant: "Torchy's Tacos", origin: "Austin, TX", dest: "Seattle, WA", cargo: "heated", foodItem: "Trailer Park Taco Set", ratings: { yelp: '4.2', uberEats: '4.5', reddit: '8/10' }, reviewText: "\"Stayed completely warm, the queso didn't congeal at all!\" - Uber Eats User" },
+                properties: { emoji: '', restaurant: "Torchy's Tacos", origin: "Austin, TX", dest: "Seattle, WA", cargo: "heated", foodItem: "Trailer Park Taco Set", ratings: { yelp: '4.2', uberEats: '4.5', reddit: '8/10' }, reviewText: "\"Stayed completely warm, the queso didn't congeal at all!\" - Uber Eats User" },
                 geometry: { type: 'Point', coordinates: [-97.7431, 30.2672] }
             },
             {
                 type: 'Feature',
-                properties: { emoji: '🍖', restaurant: "Pecan Lodge", origin: "Dallas, TX", dest: "San Francisco, CA", cargo: "heated", foodItem: "Smoked Brisket Pound", ratings: { yelp: '4.8', uberEats: '4.9', reddit: '10/10' }, reviewText: "\"Smokey, tender, melt in your mouth brisket delivered right to my door in SF.\" - Yelp Reviewer" },
+                properties: { emoji: '', restaurant: "Pecan Lodge", origin: "Dallas, TX", dest: "San Francisco, CA", cargo: "heated", foodItem: "Smoked Brisket Pound", ratings: { yelp: '4.8', uberEats: '4.9', reddit: '10/10' }, reviewText: "\"Smokey, tender, melt in your mouth brisket delivered right to my door in SF.\" - Yelp Reviewer" },
                 geometry: { type: 'Point', coordinates: [-96.7970, 32.7767] }
             },
             {
                 type: 'Feature',
-                properties: { emoji: '🦪', restaurant: "Neptune Oyster", origin: "Boston, MA", dest: "Phoenix, AZ", cargo: "refrigerated", foodItem: "Wellfleet Oysters (Dozen, Iced)", ratings: { yelp: '4.7', uberEats: '4.8', reddit: '9.5/10' }, reviewText: "\"Tastes like they were just shucked from the Atlantic. Astounding logistics.\" - Reddit User" },
+                properties: { emoji: '', restaurant: "Neptune Oyster", origin: "Boston, MA", dest: "Phoenix, AZ", cargo: "refrigerated", foodItem: "Wellfleet Oysters (Dozen, Iced)", ratings: { yelp: '4.7', uberEats: '4.8', reddit: '9.5/10' }, reviewText: "\"Tastes like they were just shucked from the Atlantic. Astounding logistics.\" - Reddit User" },
                 geometry: { type: 'Point', coordinates: [-71.0589, 42.3601] }
             },
             {
                 type: 'Feature',
-                properties: { emoji: '🦞', restaurant: "Luke's Lobster", origin: "Portland, ME", dest: "Las Vegas, NV", cargo: "refrigerated", foodItem: "Maine Lobster Roll (Cold)", ratings: { yelp: '4.8', uberEats: '4.7', reddit: '9/10' }, reviewText: "\"The chilled lobster meat was absolutely flawless upon arrival in the desert.\" - Uber Eats User" },
+                properties: { emoji: '', restaurant: "Luke's Lobster", origin: "Portland, ME", dest: "Las Vegas, NV", cargo: "refrigerated", foodItem: "Maine Lobster Roll (Cold)", ratings: { yelp: '4.8', uberEats: '4.7', reddit: '9/10' }, reviewText: "\"The chilled lobster meat was absolutely flawless upon arrival in the desert.\" - Uber Eats User" },
                 geometry: { type: 'Point', coordinates: [-70.2568, 43.6591] }
             },
             {
                 type: 'Feature',
-                properties: { emoji: '🥐', restaurant: "Cafe Du Monde", origin: "New Orleans, LA", dest: "Seattle, WA", cargo: "secure", foodItem: "Fresh Beignets & Chicory Coffee", ratings: { yelp: '4.5', uberEats: '4.8', reddit: '9/10' }, reviewText: "\"They loaded extra powdered sugar, completely flawless transport.\" - Uber Eats User" },
+                properties: { emoji: '', restaurant: "Cafe Du Monde", origin: "New Orleans, LA", dest: "Seattle, WA", cargo: "secure", foodItem: "Fresh Beignets & Chicory Coffee", ratings: { yelp: '4.5', uberEats: '4.8', reddit: '9/10' }, reviewText: "\"They loaded extra powdered sugar, completely flawless transport.\" - Uber Eats User" },
                 geometry: { type: 'Point', coordinates: [-90.0715, 29.9511] }
             },
             {
                 type: 'Feature',
-                properties: { emoji: '🍩', restaurant: "Voodoo Doughnut", origin: "Portland, OR", dest: "Miami, FL", cargo: "secure", foodItem: "Magic Dozen Box", ratings: { yelp: '4.3', uberEats: '4.6', reddit: '8.5/10' }, reviewText: "\"Not a single smudge on the frosting after flying across the entire US!\" - Yelp Reviewer " },
+                properties: { emoji: '', restaurant: "Voodoo Doughnut", origin: "Portland, OR", dest: "Miami, FL", cargo: "secure", foodItem: "Magic Dozen Box", ratings: { yelp: '4.3', uberEats: '4.6', reddit: '8.5/10' }, reviewText: "\"Not a single smudge on the frosting after flying across the entire US!\" - Yelp Reviewer " },
                 geometry: { type: 'Point', coordinates: [-122.6784, 45.5152] }
             },
             {
                 type: 'Feature',
-                properties: { emoji: '🌭', restaurant: "The Varsity", origin: "Atlanta, GA", dest: "Boston, MA", cargo: "heated", foodItem: "Chili Cheese Dog Combo", ratings: { yelp: '4.1', uberEats: '4.4', reddit: '8/10' }, reviewText: "\"Still steaming when I opened the box. Perfection!\" - Reddit User" },
+                properties: { emoji: '', restaurant: "The Varsity", origin: "Atlanta, GA", dest: "Boston, MA", cargo: "heated", foodItem: "Chili Cheese Dog Combo", ratings: { yelp: '4.1', uberEats: '4.4', reddit: '8/10' }, reviewText: "\"Still steaming when I opened the box. Perfection!\" - Reddit User" },
                 geometry: { type: 'Point', coordinates: [-84.3880, 33.7490] }
             },
             {
                 type: 'Feature',
-                properties: { emoji: '🧁', restaurant: "Cupcake Royale", origin: "Seattle, WA", dest: "Dallas, TX", cargo: "refrigerated", foodItem: "Assorted Hand-piped Cupcakes", ratings: { yelp: '4.5', uberEats: '4.8', reddit: '9/10' }, reviewText: "\"The buttercream was perfectly intact, chilled to perfection.\" - Yelp Reviewer" },
+                properties: { emoji: '', restaurant: "Cupcake Royale", origin: "Seattle, WA", dest: "Dallas, TX", cargo: "refrigerated", foodItem: "Assorted Hand-piped Cupcakes", ratings: { yelp: '4.5', uberEats: '4.8', reddit: '9/10' }, reviewText: "\"The buttercream was perfectly intact, chilled to perfection.\" - Yelp Reviewer" },
                 geometry: { type: 'Point', coordinates: [-122.3321, 47.6062] }
             }
         ];
@@ -237,6 +379,9 @@ const app = {
                     if (hero && !hero.classList.contains('faded')) hero.classList.add('faded');
                     const aiPanel = document.getElementById('active-iphone-simulator').querySelector('.ai-command-panel');
                     if (aiPanel) aiPanel.style.display = 'none';
+                    
+                    // Hide wing on emoji click
+                    if (this._hideWing) this._hideWing();
 
                     document.getElementById('origin').value = props.origin;
                     document.getElementById('destination').value = "350 N Canal, Chicago, IL 60606";
@@ -581,6 +726,10 @@ const app = {
             if (hub) hub.classList.remove('hidden');
             if (rec) rec.classList.add('hidden');
             if (bk) bk.classList.add('hidden');
+        } else if (screenId === 'orders-screen') {
+            this.fetchOrders();
+            document.getElementById('active-iphone-simulator').querySelectorAll('.social-marker').forEach(m => m.style.display = 'none');
+            document.getElementById('active-iphone-simulator').querySelectorAll('.emoji-marker-outer').forEach(m => m.style.display = '');
         } else if (screenId !== 'home-screen') {
             document.getElementById('active-iphone-simulator').querySelectorAll('.social-marker').forEach(m => m.style.display = 'none');
             document.getElementById('active-iphone-simulator').querySelectorAll('.emoji-marker-outer').forEach(m => m.style.display = '');
@@ -941,10 +1090,10 @@ const app = {
         const STAGES = [
             { label: 'Pickup',    text: 'Courier heading to pickup location' },
             { label: 'Airport',   text: 'En route to origin airport with your order' },
-            { label: 'In Flight', text: 'Airborne — cargo secured in flight' },
+            { label: 'In Flight', text: 'Airborne  cargo secured in flight' },
             { label: 'Landing',   text: 'Aircraft landing at destination city' },
             { label: 'Transit',   text: 'Last-mile courier en route to your address' },
-            { label: 'Arrived',   text: 'Order delivered — enjoy!' },
+            { label: 'Arrived',   text: 'Order delivered  enjoy!' },
         ];
         // Timing per stage in ms (demo: each ~8s so you can watch it; real: much longer)
         const STAGE_DURATIONS = [8000, 8000, 10000, 6000, 8000, 0];
@@ -1165,7 +1314,7 @@ const app = {
             let fetchSuccess = false;
 
             try {
-                const staticResponse = await fetch('./menu_cache.json');
+                const staticResponse = await fetch('./backend/menu_cache.json');
                 if (staticResponse.ok) {
                     const staticData = await staticResponse.json();
                     if (staticData && staticData.restaurants) {
@@ -1208,46 +1357,46 @@ const app = {
                             priceStr = `$${item.price}`;
                         }
                         
-                        let itemEmoji = emoji || '🍽️';
+                        let itemEmoji = emoji || '';
                         const n = (item.name || '').toLowerCase();
                         const d = (item.description || '').toLowerCase();
                         const combined = n + ' ' + d;
                         
-                        if (combined.includes('grilled cheese')) itemEmoji = '🥪';
-                        else if (combined.includes('crab')) itemEmoji = '🦀';
-                        else if (combined.includes('lobster')) itemEmoji = '🦞';
-                        else if (combined.includes('shrimp') || combined.includes('prawn')) itemEmoji = '🍤';
-                        else if (combined.includes('octopus') || combined.includes('squid') || combined.includes('calamari')) itemEmoji = '🐙';
-                        else if (combined.includes('fish') || combined.includes('mahi') || combined.includes('salmon')) itemEmoji = '🐟';
-                        else if (combined.includes('oyster') || combined.includes('clam')) itemEmoji = '🦪';
-                        else if (combined.includes('burger') || combined.includes('cheeseburger') || combined.includes('slider')) itemEmoji = '🍔';
-                        else if (combined.includes('chicken') || combined.includes('nugget') || combined.includes('wings')) itemEmoji = '🍗';
-                        else if (combined.includes('pork') || combined.includes('carnitas') || combined.includes('bacon')) itemEmoji = '🥓';
-                        else if (combined.includes('brisket') || combined.includes('ribs')) itemEmoji = '🍖';
-                        else if (combined.includes('sausage') || combined.includes('hot dog') || combined.includes('chili dog')) itemEmoji = '🌭';
-                        else if (combined.includes('taco')) itemEmoji = '🌮';
-                        else if (combined.includes('pizza')) itemEmoji = '🍕';
-                        else if (combined.includes('salad') || combined.includes('slaw')) itemEmoji = '🥗';
-                        else if (combined.includes('roll') || combined.includes('bun') || combined.includes('bread') || combined.includes('sandwich')) itemEmoji = '🥪';
-                        else if (combined.includes('soup') || combined.includes('bisque') || combined.includes('chowder') || combined.includes('gumbo') || combined.includes('bowl')) itemEmoji = '🥣';
-                        else if (combined.includes('fries') || combined.includes('potato')) itemEmoji = '🍟';
-                        else if (combined.includes('mac') && combined.includes('cheese') || combined.includes('queso')) itemEmoji = '🧀';
-                        else if (combined.includes('corn')) itemEmoji = '🌽';
-                        else if (combined.includes('onion')) itemEmoji = '🧅';
-                        else if (combined.includes('cake') || combined.includes('brownie')) itemEmoji = '🍰';
-                        else if (combined.includes('pie') || combined.includes('cobbler')) itemEmoji = '🥧';
-                        else if (combined.includes('cookie')) itemEmoji = '🍪';
-                        else if (combined.includes('doughnut') || combined.includes('beignet') || combined.includes('donut')) itemEmoji = '🍩';
-                        else if (combined.includes('ice cream') || combined.includes('milkshake')) itemEmoji = '🥤';
-                        else if (combined.includes('wine')) itemEmoji = '🍷';
-                        else if (combined.includes('beer')) itemEmoji = '🍺';
-                        else if (combined.includes('coffee') || combined.includes('lait') || combined.includes('espresso')) itemEmoji = '☕';
-                        else if (combined.includes('tea')) itemEmoji = '🍵';
-                        else if (combined.includes('juice') || combined.includes('lemonade') || combined.includes('coke') || combined.includes('soda') || combined.includes('orange')) itemEmoji = '🥤';
-                        else if (combined.includes('water')) itemEmoji = '💧';
-                        else if (combined.includes('fruit') || combined.includes('apple')) itemEmoji = '🍎';
-                        else if (combined.includes('avocado')) itemEmoji = '🥑';
-                        else if (combined.includes('t-shirt') || combined.includes('shirt') || combined.includes('apparel')) itemEmoji = '👕';
+                        if (combined.includes('grilled cheese')) itemEmoji = '';
+                        else if (combined.includes('crab')) itemEmoji = '';
+                        else if (combined.includes('lobster')) itemEmoji = '';
+                        else if (combined.includes('shrimp') || combined.includes('prawn')) itemEmoji = '';
+                        else if (combined.includes('octopus') || combined.includes('squid') || combined.includes('calamari')) itemEmoji = '';
+                        else if (combined.includes('fish') || combined.includes('mahi') || combined.includes('salmon')) itemEmoji = '';
+                        else if (combined.includes('oyster') || combined.includes('clam')) itemEmoji = '';
+                        else if (combined.includes('burger') || combined.includes('cheeseburger') || combined.includes('slider')) itemEmoji = '';
+                        else if (combined.includes('chicken') || combined.includes('nugget') || combined.includes('wings')) itemEmoji = '';
+                        else if (combined.includes('pork') || combined.includes('carnitas') || combined.includes('bacon')) itemEmoji = '';
+                        else if (combined.includes('brisket') || combined.includes('ribs')) itemEmoji = '';
+                        else if (combined.includes('sausage') || combined.includes('hot dog') || combined.includes('chili dog')) itemEmoji = '';
+                        else if (combined.includes('taco')) itemEmoji = '';
+                        else if (combined.includes('pizza')) itemEmoji = '';
+                        else if (combined.includes('salad') || combined.includes('slaw')) itemEmoji = '';
+                        else if (combined.includes('roll') || combined.includes('bun') || combined.includes('bread') || combined.includes('sandwich')) itemEmoji = '';
+                        else if (combined.includes('soup') || combined.includes('bisque') || combined.includes('chowder') || combined.includes('gumbo') || combined.includes('bowl')) itemEmoji = '';
+                        else if (combined.includes('fries') || combined.includes('potato')) itemEmoji = '';
+                        else if (combined.includes('mac') && combined.includes('cheese') || combined.includes('queso')) itemEmoji = '';
+                        else if (combined.includes('corn')) itemEmoji = '';
+                        else if (combined.includes('onion')) itemEmoji = '';
+                        else if (combined.includes('cake') || combined.includes('brownie')) itemEmoji = '';
+                        else if (combined.includes('pie') || combined.includes('cobbler')) itemEmoji = '';
+                        else if (combined.includes('cookie')) itemEmoji = '';
+                        else if (combined.includes('doughnut') || combined.includes('beignet') || combined.includes('donut')) itemEmoji = '';
+                        else if (combined.includes('ice cream') || combined.includes('milkshake')) itemEmoji = '';
+                        else if (combined.includes('wine')) itemEmoji = '';
+                        else if (combined.includes('beer')) itemEmoji = '';
+                        else if (combined.includes('coffee') || combined.includes('lait') || combined.includes('espresso')) itemEmoji = '';
+                        else if (combined.includes('tea')) itemEmoji = '';
+                        else if (combined.includes('juice') || combined.includes('lemonade') || combined.includes('coke') || combined.includes('soda') || combined.includes('orange')) itemEmoji = '';
+                        else if (combined.includes('water')) itemEmoji = '';
+                        else if (combined.includes('fruit') || combined.includes('apple')) itemEmoji = '';
+                        else if (combined.includes('avocado')) itemEmoji = '';
+                        else if (combined.includes('t-shirt') || combined.includes('shirt') || combined.includes('apparel')) itemEmoji = '';
                         
                         const safeName = (item.name || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
                         const safeDesc = (item.description || item.category || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
@@ -1528,7 +1677,7 @@ const app = {
             if(tempEl && hmdEl && trackingScreen && getComputedStyle(trackingScreen).display !== 'none') {
                 const baseT = 34.1;
                 const fluctuateT = baseT + (Math.random() * 0.3); // 34.1 to 34.4
-                tempEl.textContent = fluctuateT.toFixed(1) + '°F';
+                tempEl.textContent = fluctuateT.toFixed(1) + ' deg F';
                 
                 const baseH = 63;
                 const fluctuateH = Math.floor(baseH + Math.random() * 3);
@@ -1666,10 +1815,50 @@ const app = {
     },
 
     /**
-     * Updates the summary bar (stub to prevent TypeErrors)
+     * Toggles the generic booking form for "Send Package"
+     */
+    toggleBookingForm() {
+        const card = document.getElementById('booking-card');
+        if (!card) return;
+        
+        if (card.style.display === 'none') {
+            card.style.display = 'block';
+            card.classList.remove('collapsed');
+            
+            // Focus on booking by fading out background elements
+            const hero = document.getElementById('active-iphone-simulator').querySelector('.hero-section');
+            if (hero && !hero.classList.contains('faded')) hero.classList.add('faded');
+            
+            const aiPanel = document.getElementById('active-iphone-simulator').querySelector('.ai-command-panel');
+            if (aiPanel) aiPanel.style.display = 'none';
+            
+            // Re-populate if needed
+            this.updateSummary();
+        } else {
+            card.classList.toggle('collapsed');
+        }
+    },
+
+    /**
+     * Updates the summary bar based on inputs
      */
     updateSummary() {
-         // Safe stub
+        const originInput = document.getElementById('origin');
+        const destInput = document.getElementById('destination');
+        const cargoSelect = document.getElementById('cargo-select');
+        
+        const routeText = document.getElementById('summary-route-text');
+        const cargoText = document.getElementById('summary-cargo-text');
+        
+        if (originInput && destInput && routeText) {
+            const org = originInput.value.split(',')[0] || 'Origin';
+            const dst = destInput.value.split(',')[0] || 'Destination';
+            routeText.textContent = `${org} -> ${dst}`;
+        }
+        
+        if (cargoSelect && cargoText) {
+            cargoText.textContent = `- ${cargoSelect.value}`;
+        }
     },
 
     /**
@@ -2635,7 +2824,52 @@ const app = {
     /**
      * Starts the tracking simulation screen
      */
-    startMission() {
+    async startMission(event) {
+        const costEl = document.getElementById('dpp-total-cost') || document.getElementById('total-cost-display-2');
+        const costStr = costEl ? costEl.textContent.replace(/[^0-9.]/g, '') : '1000';
+        const amountCents = Math.floor(parseFloat(costStr || '0') * 100) || 100000;
+
+        let btn = event ? event.currentTarget : document.getElementById('dpp-dispatch-btn');
+        let origHtml = '';
+        if (btn) {
+            origHtml = btn.innerHTML;
+            btn.innerHTML = '<span class="btn-loader" style="border-color: white; border-top-color: transparent;"></span> Processing Payment...';
+            btn.disabled = true;
+        }
+
+        try {
+            const resp = await fetch('/api/payments/intent', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ amount: amountCents })
+            });
+            const data = await resp.json();
+            
+            if (data.status !== 'success') {
+                throw new Error("Payment failed");
+            }
+            
+            // Save the order to the PostgreSQL Database
+            const foodItem = document.getElementById('pickup-food-item') ? document.getElementById('pickup-food-item').textContent : 'Premium Package';
+            const emojiEl = document.getElementById('pickup-sheet-emoji');
+            const itemEmoji = (emojiEl && emojiEl.style.display !== 'none') ? emojiEl.textContent : '';
+            
+            await fetch('/api/orders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ amount_cents: amountCents, food_item: foodItem, emoji: itemEmoji })
+            });
+            
+        } catch(e) {
+            console.error("Payment error:", e);
+            alert("Payment declined. Please check your wallet settings.");
+            if (btn) {
+                btn.innerHTML = origHtml;
+                btn.disabled = false;
+            }
+            return;
+        }
+
         this.fireGoldConfetti();
         this._startMissionTimeline();
         
@@ -2654,7 +2888,7 @@ const app = {
                     payout: totalCostText,
                     oCoords: this._activeOriginCoords || [-74.006, 40.7128],
                     dCoords: this._activeDestCoords || [-118.2437, 34.0522],
-                    emoji: this._activeEmoji || '📦',
+                    emoji: this._activeEmoji || '',
                     mapboxToken: mapboxgl.accessToken
                 }
             }, '*');
@@ -3032,7 +3266,7 @@ const app = {
      * Bursts celebration emojis at a map coordinate when delivery arrives
      */
     _burstCelebration(lngLat) {
-        const celebrationEmojis = ['❤️', '😍', '🤤', '🔥', '✨'];
+        const celebrationEmojis = ['', '', '', '', ''];
         const markers = [];
 
         celebrationEmojis.forEach((emo, i) => {
@@ -3362,7 +3596,7 @@ const app = {
             etaStr = finalEta.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
             isTomorrow = _isNextLocalDay(finalEta, now);
         } else if (planData.legs && planData.legs.length >= 3) {
-            // No flight arrival time — sum all leg durations from now
+            // No flight arrival time  sum all leg durations from now
             let totalMinutes = 0;
             for (let i = 1; i <= 5; i++) {
                 const leg = planData.legs.find(l => l.step === i);
@@ -3577,24 +3811,24 @@ const app = {
                         </div>
                         <div class="dpp-step-expanded">
                             <div style="display: flex; justify-content: space-between; margin-bottom: 6px; color: #fff;">
-                                <span>• Return Transport ($${leg6.cost.toFixed(0)})</span>
+                                <span>- Return Transport ($${leg6.cost.toFixed(0)})</span>
                             </div>
                             <div style="margin-bottom: 6px; padding-left: 10px; border-left: 2px solid rgba(255,255,255,0.2);">
                                 ${leg6.includes ? leg6.includes.map(inc => `<div style="margin-bottom: 2px;">- ${inc}</div>`).join('') : ''}
                             </div>
                             <div style="display: flex; justify-content: space-between; margin-top: 6px; color: #fff;">
-                                <span>• Concierge Fee: ${leg7.label}</span>
+                                <span>- Concierge Fee: ${leg7.label}</span>
                                 <span>$${leg7.cost.toFixed(0)}</span>
                             </div>
                             <div style="margin-top: 2px; padding-left: 10px; border-left: 2px solid rgba(255,255,255,0.2);">
                                 ${leg7.includes ? leg7.includes.map(inc => `<div style="margin-bottom: 2px;">- ${inc}</div>`).join('') : ''}
                             </div>
                             <div style="display: flex; justify-content: space-between; margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.1); color: #fff;">
-                                <span>• Courier Labor (~${Math.round(leg8.duration_minutes/60)}h)</span>
+                                <span>- Courier Labor (~${Math.round(leg8.duration_minutes/60)}h)</span>
                                 <span>$${leg8.cost.toFixed(0)}</span>
                             </div>
                             <div style="display: flex; justify-content: space-between; margin-top: 6px; color: #fff;">
-                                <span>• 20% Platform Fee</span>
+                                <span>- 20% Platform Fee</span>
                                 <span style="color: var(--accent-color); font-weight: bold;">$${leg9.cost.toFixed(0)}</span>
                             </div>
                         </div>
@@ -3650,15 +3884,15 @@ const app = {
                         </div>
                         <div class="dpp-step-expanded">
                             <div style="display: flex; justify-content: space-between; color: white; margin-bottom: 4px;">
-                                <span>• Origin Ride</span>
+                                <span>- Origin Ride</span>
                                 <span>$${(pickupCost / 2).toFixed(0)}</span>
                             </div>
                             <div style="display: flex; justify-content: space-between; color: white; margin-bottom: 4px;">
-                                <span>• Air Cargo</span>
+                                <span>- Air Cargo</span>
                                 <span>$${flightCost.toFixed(0)}</span>
                             </div>
                             <div style="display: flex; justify-content: space-between; color: white;">
-                                <span>• Final Mile Dropoff</span>
+                                <span>- Final Mile Dropoff</span>
                                 <span>$${lastMileCost.toFixed(0)}</span>
                             </div>
                         </div>
@@ -3682,19 +3916,19 @@ const app = {
                         </div>
                         <div class="dpp-step-expanded">
                             <div style="display: flex; justify-content: space-between; color: white; margin-bottom: 4px;">
-                                <span>• Return Journey</span>
+                                <span>- Return Journey</span>
                                 <span>~ $${(opCostF - conciergeCost - laborCostF).toFixed(0)}</span>
                             </div>
                             <div style="display: flex; justify-content: space-between; color: white;">
-                                <span>• Concierge Fee</span>
+                                <span>- Concierge Fee</span>
                                 <span>$${conciergeCost.toFixed(0)}</span>
                             </div>
                             <div style="display: flex; justify-content: space-between; margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.1); color: #fff;">
-                                <span>• Courier Labor (~${Math.round(flightMinutes/60 + 2)}h)</span>
+                                <span>- Courier Labor (~${Math.round(flightMinutes/60 + 2)}h)</span>
                                 <span>$${laborCostF.toFixed(0)}</span>
                             </div>
                             <div style="display: flex; justify-content: space-between; margin-top: 6px; color: #fff;">
-                                <span>• 20% Platform Fee</span>
+                                <span>- 20% Platform Fee</span>
                                 <span style="color: var(--accent-color); font-weight: bold;">$${platFeeF.toFixed(0)}</span>
                             </div>
                         </div>
@@ -3980,7 +4214,7 @@ const app = {
                             </div>
                             <div style="display:flex; flex-direction:column; align-items:flex-start;">
                                 <div style="font-size:13px; color:white; font-weight:600;">${pkg.flight.airline}</div>
-                                <div style="font-size:11px; color:var(--text-secondary);"><span style="color:#fff;">${pkg.flight.dept}</span> Departure • ${stopsText}</div>
+                                <div style="font-size:11px; color:var(--text-secondary);"><span style="color:#fff;">${pkg.flight.dept}</span> Departure - ${stopsText}</div>
                             </div>
                         </div>
                         <div style="text-align:right;">
@@ -4167,16 +4401,15 @@ function bootJetSlice() {
         document.addEventListener('JetSliceConfigReady', () => app.initMap());
     }
 
-    // Hide the wing logo on first UI click
+    // Make hideWing available globally for emoji click
     const wing = document.getElementById('jetslice-wing');
     if (wing) {
-        const hideWing = () => {
+        app._hideWing = () => {
+            if (wing.style.display === 'none') return;
             wing.style.opacity = '0';
             wing.style.transform = 'translateX(-10px)';
             setTimeout(() => { wing.style.display = 'none'; }, 400);
         };
-        const appCont = document.getElementById('active-iphone-simulator').querySelector('.app-container');
-        if (appCont) appCont.addEventListener('click', hideWing, { once: true });
     }
 
     // Global click listener to hide autocomplete popup when clicking outside

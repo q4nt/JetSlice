@@ -1,6 +1,6 @@
 import re
 
-with open('index.html', 'r', encoding='utf-8') as f:
+with open('../index.html', 'r', encoding='utf-8') as f:
     content = f.read()
 
 # Replace the time-slot divs (inline onclick handlers) with rmp-time-slot class + proper data attrs
@@ -91,6 +91,6 @@ new_panel = '''<div class="rate-marketplace-panel awaiting prod-screen" id="rate
 
 new_content = content[:start_idx] + new_panel + content[end_idx:]
 print(f"Replaced panel. Length diff: {len(new_content) - len(content)}")
-with open('index.html', 'w', encoding='utf-8') as f:
+with open('../index.html', 'w', encoding='utf-8') as f:
     f.write(new_content)
 print("Done")

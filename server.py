@@ -45,6 +45,18 @@ except ImportError:
 app = Flask(__name__, static_folder='.', static_url_path='')
 CORS(app)
 
+from backend.models import init_db
+from backend.telemetry import init_telemetry
+from backend.auth import auth_bp
+from backend.payments import payments_bp
+from backend.iot import iot_bp
+
+init_db(app)
+init_telemetry(app)
+app.register_blueprint(auth_bp)
+app.register_blueprint(payments_bp)
+app.register_blueprint(iot_bp)
+
 PORT = 8042
 
 # ---------------------------------------------------------------------------
@@ -53,7 +65,6 @@ PORT = 8042
 amadeus_client = None
 AMADEUS_CLIENT_ID = os.environ.get('AMADEUS_CLIENT_ID', '')
 AMADEUS_CLIENT_SECRET = os.environ.get('AMADEUS_CLIENT_SECRET', '')
-SERPAPI_KEY = os.environ.get('SERPAPI_KEY', '')
 
 if AMADEUS_AVAILABLE and AMADEUS_CLIENT_ID and AMADEUS_CLIENT_SECRET:
     try:
@@ -181,83 +192,15 @@ def search_gds_flights(origin_iata, dest_iata, departure_date=None):
     if not departure_date:
         departure_date = datetime.now().strftime('%Y-%m-%d')
 
-    # --- Try SerpAPI (Google Flights Live) ---
-    if SERPAPI_KEY:
-        try:
-            url = f"https://serpapi.com/search.json?engine=google_flights&departure_id={origin_iata}&arrival_id={dest_iata}&outbound_date={departure_date}&type=2&stops=1&api_key={SERPAPI_KEY}"
-            resp = requests.get(url, timeout=15)
-            if resp.status_code == 200:
-                data = resp.json()
-                flight_results = data.get("best_flights", [])
-                if not flight_results:
-                    flight_results = data.get("other_flights", [])
-                
-                parsed_flights = []
-                for offer in flight_results[:8]:  # Take top 8
-                    if "flights" not in offer or not offer["flights"]:
-                        continue
-                    
-                    segments = offer["flights"]
-                    first_seg = segments[0]
-                    last_seg = segments[-1]
-                    
-                    airline_name = first_seg.get("airline", "Unknown Airline")
-                    flight_num = first_seg.get("flight_number", "Unknown")
-                    carrier_code = flight_num.split(" ")[0] if " " in flight_num else airline_name[:2].upper()
-                    
-                    dep_time = first_seg.get("departure_airport", {}).get("time", departure_date)
-                    arr_time = last_seg.get("arrival_airport", {}).get("time", departure_date)
-                    # Convert 'YYYY-MM-DD HH:MM' to ISO Format 'YYYY-MM-DDTHH:MM:00'
-                    if len(dep_time) == 16: dep_time = dep_time.replace(" ", "T") + ":00"
-                    if len(arr_time) == 16: arr_time = arr_time.replace(" ", "T") + ":00"
-                    
-                    # Format departure time strings for the frontend
-                    try:
-                        dept_obj = datetime.strptime(dep_time, '%Y-%m-%dT%H:%M:%S')
-                        dept_str = dept_obj.strftime('%I:%M %p').lstrip('0')
-                    except Exception:
-                        dept_str = dep_time.split('T')[1][:5] if 'T' in dep_time else "TBD"
-
-                    # Brand colors
-                    COLORS = {
-                        "UA": "#005DAA", "WN": "#E24726", "B6": "#0033A0",
-                        "DL": "#003A70", "AA": "#B61F23", "NK": "#FFD200",
-                        "F9": "#004225", "AS": "#01426A", "SY": "#003E7E",
-                        "HA": "#331661"
-                    }
-                    color = COLORS.get(carrier_code, "#4ade80")
-                    
-                    price = float(offer.get("price", 400))
-                    dur_min = offer.get("total_duration", 120)
-                    
-                    # Ensure formatting matches what app.js Rate Marketplace expects
-                    parsed_flights.append({
-                        "airline": airline_name,
-                        "carrier_code": carrier_code,
-                        "code": carrier_code,
-                        "color": color,
-                        "flight_number": flight_num.replace(" ", ""),
-                        "flightNum": flight_num,
-                        "origin": origin_iata,
-                        "destination": dest_iata,
-                        "departure_time": dep_time,
-                        "dept": dept_str,
-                        "arrival_time": arr_time,
-                        "duration": f"PT{dur_min // 60}H{dur_min % 60}M",
-                        "stops": len(segments) - 1,
-                        "price": round(price * 2.8, 2) if price < 300 else round(price, 2), # Simulated First Class Cost
-                        "price_economy": round(price, 2),
-                        "currency": "USD",
-                        "cabin": "First Class Cargo" if price < 300 else "Premium Cargo",
-                        "source": "SerpApi Live",
-                        "bookable": True
-                    })
-                
-                if parsed_flights:
-                    print(f"[JetSlice] Found {len(parsed_flights)} SerpApi flights: {origin_iata} -> {dest_iata}")
-                    return parsed_flights
-        except Exception as e:
-            print(f"[SerpAPI] Error resolving flights: {e}")
+    # --- Try Google Flights Scraper Agent ---
+    try:
+        from backend.flight_scraper import scrape_google_flights
+        scraped_flights = scrape_google_flights(origin_iata, dest_iata, departure_date)
+        if scraped_flights:
+            print(f"[JetSlice] Found {len(scraped_flights)} scraped Google Flights: {origin_iata} -> {dest_iata}")
+            return scraped_flights
+    except Exception as e:
+        print(f"[Scraper] Agent execution error: {e}")
 
     # --- Try Amadeus API ---
     if amadeus_client:
@@ -306,15 +249,7 @@ def search_gds_flights(origin_iata, dest_iata, departure_date=None):
         except Exception as e:
             print(f"[Amadeus] API error: {e}")
 
-    # --- Try Google Flights Scraper ---
-    try:
-        from flight_scraper import scrape_google_flights
-        scraped_flights = scrape_google_flights(origin_iata, dest_iata, departure_date)
-        if scraped_flights:
-            print(f"[JetSlice] Found {len(scraped_flights)} scraped Google Flights: {origin_iata} -> {dest_iata}")
-            return scraped_flights
-    except Exception as e:
-        print(f"[Scraper] Integration error: {e}")
+
 
     # --- Mock fallback ---
     return _mock_gds_flights(origin_iata, dest_iata, departure_date)
@@ -884,7 +819,7 @@ def api_route():
         rest_lon, rest_lat = None, None
     rest_name = request.args.get('rest_name', 'Target Restaurant').strip()
 
-    from restaurant_scraper import scrape_restaurant_hours
+    from backend.restaurant_scraper import scrape_restaurant_hours
     rest_hours_data = scrape_restaurant_hours(rest_name, origin)
 
     # Courier Start (Home) - assume home is near the restaurant if not provided
@@ -1517,7 +1452,7 @@ def api_menu_cache():
     Query params:
       - restaurant: (optional) filter by restaurant name (partial match)
     """
-    cache_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'menu_cache.json')
+    cache_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'backend', 'menu_cache.json')
 
     if not os.path.exists(cache_file):
         return jsonify({
@@ -1578,7 +1513,7 @@ def api_menu():
     if not city:
         return jsonify({"error": "Missing 'city' parameter"}), 400
 
-    from menu_scraper import scrape_restaurant_menu
+    from backend.menu_scraper import scrape_restaurant_menu
 
     print(f"\n[JetSlice] Menu scrape request: {restaurant} in {city}")
     menu_data = scrape_restaurant_menu(restaurant, city)
